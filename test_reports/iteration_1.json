@@ -1,0 +1,36 @@
+{
+  "summary": "First-run validation of Mandala (Indic donations platform). Backend: 23/23 pytest tests passed (auth, donations, subscriptions, super-admin analytics, temple-admin overview, role guards, AI-generated deity content via Claude Sonnet 4.5). Frontend: Landing/Deities/DeityDetail/Donate/Subscribe(monthly+tier)/Dashboard/AdminDashboard/TempleAdmin all load and integrate with backend. End-to-end donation flow (preset 501 INR -> auto split 25% across 4 Durga temples -> pay -> auto-confirm) succeeded with mock_rzp_ payment_ref. Razorpay is MOCKED (expected per spec).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/subscribe/{deityId}", "issues": ["Section heading 'SPLIT ACROSS 4 TEMPLES' appears twice — once as Subscribe page section header and again inside the SplitAllocator component header. Cosmetic duplication."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Remove duplicate 'Split across N temples' header in Subscribe.jsx — keep either the parent section header or the SplitAllocator's internal label, not both."
+  ],
+  "critical_code_review_comments": [
+    "server.py is ~820 lines and contains models, routes, AI integration, and seed data in one file. Consider splitting into routers (auth/, donations/, admin/, etc.), models.py, and seed.py for maintainability.",
+    "JWT_SECRET in /app/backend/.env is a default placeholder ('mandala-sacred-secret-key-change-in-prod-2026'). Must be rotated before any non-preview deployment.",
+    "Donation/subscription split validation tolerates ±1.5 INR drift (line 386). Acceptable for rounded UI, but document the tolerance.",
+    "_validate_splits does not check for negative percentages/amounts — a malicious split with -10% and +110% summing to 100 would pass. Add per-item lower-bound validation.",
+    "No rate-limiting on /api/auth/login or /api/donations — production should add throttling.",
+    "Frontend stores JWT in localStorage (mandala_token). Acceptable for MVP but vulnerable to XSS; consider httpOnly cookie path for production."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py (created)"
+  ],
+  "success_rate": {"backend": "100% (23/23)", "frontend": "100% of tested flows"},
+  "test_credentials": "Super admin: admin@mandala.in/mandala123 ; Donor: devotee@mandala.in/devotee123 ; Temple admin example: temple.vaishnodevishrine@mandala.in/temple123 — all verified working.",
+  "seed_data_creation": "Backend seeds 6 traditions, 8 deities, 20 temples (each with auto-created temple_admin user) on startup. AI test created 1 extra deity 'Test Ambika Devi' (left in DB as instructed). Donations and subscriptions created during testing are tagged to devotee@mandala.in.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test suite at /app/backend/tests/backend_test.py is reusable as regression. Razorpay is intentionally mocked; donation status transitions pending->succeeded via /api/donations/{id}/confirm — frontend Donate.jsx already chains the two calls. SplitAllocator default equal-split is valid (sums to 100%), so Playwright tests don't need to drag radix sliders. Keys data-testid: preset-{amt}, donate-pay-btn, donate-success, sub-mode-monthly|tier, sub-tier-{bronze|silver|gold}, sub-start-btn, dashboard-tabs/tab-donations/tab-subs.",
+  "rca_of_the_issue": "No defects requiring RCA. Initial Playwright failure on landing was a wrong test keyword ('how it works' vs 'How Mandala Works') — UI is fine. Initial subscription test failure was Python lambda misuse in selector helper — re-tested and passed."
+}
