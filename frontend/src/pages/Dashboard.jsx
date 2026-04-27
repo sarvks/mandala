@@ -88,7 +88,7 @@ export default function Dashboard() {
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {notifications.slice(0, 6).map((n, i) => (
               <div
-                key={`${n.temple_id}-${n.festival}-${i}`}
+                key={`${n.festival}-${i}`}
                 data-testid={`notif-${i}`}
                 className="rounded-xl border border-[#D4AF37]/30 bg-white p-4"
               >
@@ -101,8 +101,14 @@ export default function Dashboard() {
                 <div className="mt-1 text-xs text-[#475569]">
                   {new Date(n.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
                 </div>
-                <div className="mt-3 text-sm text-[#1A2436]">{n.temple_name}</div>
-                <div className="text-xs text-[#475569]">{n.temple_city}</div>
+                <div className="mt-3 text-sm text-[#1A2436]">
+                  {n.temples?.length === 1
+                    ? n.temples[0].temple_name
+                    : `${n.temples?.length || 0} of your temples`}
+                </div>
+                <div className="mt-1 text-xs leading-relaxed text-[#475569] line-clamp-2">
+                  {n.temples?.map((t) => t.temple_name).join(" · ")}
+                </div>
               </div>
             ))}
           </div>

@@ -892,49 +892,49 @@ async def notifications_me(user=Depends(get_current_user)):
     if not fav_ids:
         return {"notifications": []}
     temples = await db.temples.find({"id": {"$in": fav_ids}}, {"_id": 0}).to_list(500)
-    # Build a map of deity_id -> (deity_name, tradition_slug)
     deity_ids = list({did for t in temples for did in t.get("deity_ids", [])})
     deities = await db.deities.find({"id": {"$in": deity_ids}}, {"_id": 0}).to_list(500)
     deity_by_id = {d["id"]: d for d in deities}
 
     today = now_utc().date()
-    results = []
+    # Build map: festival_name -> { festival_fields, temples: [...] }
+    grouped: dict[str, dict] = {}
     for t in temples:
-        matched_festivals = []
         for did in t.get("deity_ids", []):
             d = deity_by_id.get(did)
             if not d:
                 continue
             for f in FESTIVALS:
+                matches = False
                 if f["deity_name"] and f["deity_name"] == d["name"]:
-                    matched_festivals.append(f)
+                    matches = True
                 elif f["tradition_slug"] and f["tradition_slug"] == d["tradition_slug"]:
-                    matched_festivals.append(f)
-        # dedupe by name
-        seen = set()
-        for f in sorted(matched_festivals, key=lambda x: x["date"]):
-            if f["name"] in seen:
-                continue
-            seen.add(f["name"])
-            try:
-                fdate = datetime.fromisoformat(f["date"]).date()
-            except Exception:
-                continue
-            if fdate < today:
-                continue
-            days_until = (fdate - today).days
-            if days_until > 400:
-                continue
-            results.append({
-                "temple_id": t["id"],
-                "temple_name": t["name"],
-                "temple_city": t["city"],
-                "festival": f["name"],
-                "date": f["date"],
-                "days_until": days_until,
-                "description": f["description"],
-            })
-    results.sort(key=lambda r: r["days_until"])
+                    matches = True
+                if not matches:
+                    continue
+                try:
+                    fdate = datetime.fromisoformat(f["date"]).date()
+                except Exception:
+                    continue
+                if fdate < today:
+                    continue
+                days_until = (fdate - today).days
+                if days_until > 400:
+                    continue
+                entry = grouped.setdefault(f["name"], {
+                    "festival": f["name"],
+                    "date": f["date"],
+                    "days_until": days_until,
+                    "description": f["description"],
+                    "temples": [],
+                })
+                if not any(tp["temple_id"] == t["id"] for tp in entry["temples"]):
+                    entry["temples"].append({
+                        "temple_id": t["id"],
+                        "temple_name": t["name"],
+                        "temple_city": t["city"],
+                    })
+    results = sorted(grouped.values(), key=lambda r: r["days_until"])
     return {"notifications": results}
 
 
