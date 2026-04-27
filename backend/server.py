@@ -378,6 +378,11 @@ async def create_temple(payload: TempleCreate, user=Depends(require_role("super_
 
 # ────────── Donations ──────────
 def _validate_splits(total: float, splits: List[SplitItem]):
+    for s in splits:
+        if s.percentage < 0 or s.amount < 0:
+            raise HTTPException(400, "Split percentages and amounts must be non-negative")
+        if s.percentage > 100:
+            raise HTTPException(400, "A single split cannot exceed 100%")
     pct = sum(s.percentage for s in splits)
     if abs(pct - 100) > 0.5:
         raise HTTPException(400, f"Splits must sum to 100% (got {pct:.2f})")

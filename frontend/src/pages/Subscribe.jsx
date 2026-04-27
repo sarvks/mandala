@@ -162,8 +162,7 @@ export default function Subscribe() {
               </div>
             )}
 
-            <div className="mt-10 label-small text-[#7C191E]">Split across {temples.length} temples</div>
-            <div className="mt-4">
+            <div className="mt-10">
               <SplitAllocator temples={temples} total={currentAmount} onChange={setSplit} />
             </div>
 
