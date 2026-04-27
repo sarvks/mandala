@@ -6,6 +6,7 @@ import Footer from "./components/Footer";
 import Landing from "./pages/Landing";
 import Deities from "./pages/Deities";
 import DeityDetail from "./pages/DeityDetail";
+import Temples from "./pages/Temples";
 import Donate from "./pages/Donate";
 import Subscribe from "./pages/Subscribe";
 import Patron from "./pages/Patron";
@@ -28,6 +29,7 @@ function App() {
               <Route path="/" element={<Landing />} />
               <Route path="/deities" element={<Deities />} />
               <Route path="/deities/:id" element={<DeityDetail />} />
+              <Route path="/temples" element={<Temples />} />
               <Route path="/donate/:deityId" element={<Donate />} />
               <Route path="/subscribe/:deityId" element={<Subscribe />} />
               <Route path="/patron" element={<Patron />} />

@@ -30,6 +30,7 @@ export default function Footer() {
           <div className="label-small mb-4 text-white/50">Discover</div>
           <ul className="space-y-2 text-sm text-white/75">
             <li><Link to="/deities" className="hover:text-[#D4AF37]">Deities</Link></li>
+            <li><Link to="/temples" className="hover:text-[#D4AF37]">Temples</Link></li>
             <li><Link to="/traditions" className="hover:text-[#D4AF37]">Traditions</Link></li>
             <li><Link to="/patron" className="hover:text-[#D4AF37]">Patron plans</Link></li>
           </ul>

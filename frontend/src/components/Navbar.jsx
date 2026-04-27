@@ -59,6 +59,9 @@ export default function Navbar() {
           <NavLink to="/deities" data-testid="nav-deities" className={navItem}>
             Deities
           </NavLink>
+          <NavLink to="/temples" data-testid="nav-temples" className={navItem}>
+            Temples
+          </NavLink>
           <NavLink to="/traditions" data-testid="nav-traditions" className={navItem}>
             Traditions
           </NavLink>
@@ -137,6 +140,9 @@ export default function Navbar() {
           <div className="flex flex-col gap-4">
             <Link to="/deities" data-testid="mobile-nav-deities" onClick={() => setOpen(false)}>
               Deities
+            </Link>
+            <Link to="/temples" data-testid="mobile-nav-temples" onClick={() => setOpen(false)}>
+              Temples
             </Link>
             <Link to="/traditions" data-testid="mobile-nav-traditions" onClick={() => setOpen(false)}>
               Traditions
