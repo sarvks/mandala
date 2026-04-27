@@ -1,0 +1,106 @@
+{
+  "theme": "light",
+  "archetype": "Archetype 1 (Organic & Earthy) mixed with Archetype 5 (Jewel & Luxury)",
+  "color_palette": {
+    "background": {
+      "base": "#F9F6F0",
+      "surface": "#FFFFFF",
+      "glass": "bg-white/70 backdrop-blur-xl"
+    },
+    "text": {
+      "primary": "#1A2436",
+      "secondary": "#475569",
+      "muted": "#94A3B8"
+    },
+    "accents": {
+      "primary": "#7C191E",
+      "secondary": "#D4AF37",
+      "tertiary": "#1E293B"
+    },
+    "borders": "#E2E8F0"
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Cormorant Garamond",
+      "body": "Manrope",
+      "mono": "JetBrains Mono"
+    },
+    "scales": {
+      "h1": "text-5xl sm:text-6xl lg:text-7xl tracking-tighter leading-none font-medium",
+      "h2": "text-4xl sm:text-5xl tracking-tight leading-tight",
+      "h3": "text-2xl sm:text-3xl tracking-tight",
+      "h4": "text-xl sm:text-2xl",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm tracking-wide uppercase"
+    }
+  },
+  "spacing_and_layout": {
+    "marketing": {
+      "container_padding": "py-24 px-6 md:px-12",
+      "grid_pattern": "Bento Grid (Mode A: Tetris) - wide gaps gap-8 to gap-12, asymmetrical span logic",
+      "hero_overlay": "bg-white/30 backdrop-blur-[2px] with subtle gradient bg-gradient-to-t from-[#F9F6F0] to-transparent"
+    },
+    "dashboard": {
+      "container_padding": "p-6",
+      "grid_pattern": "Control Room Grid (Mode B) - tight gaps gap-6, 1px solid borders, pure white surfaces on warm off-white background",
+      "card_style": "bg-white border border-stone-200/60 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#7C191E] text-white hover:bg-[#5D1316] rounded-full px-6 py-3 font-medium transition-colors",
+      "secondary": "bg-white border border-[#D4AF37] text-[#1A2436] hover:bg-[#F9F6F0] rounded-full px-6 py-3 transition-colors",
+      "outline": "border border-[#1A2436] text-[#1A2436] hover:bg-[#1A2436] hover:text-white rounded-full px-6 py-3"
+    },
+    "cards": {
+      "marketing": "bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm hover:-translate-y-1 transition-transform duration-300",
+      "dashboard": "bg-white border border-stone-200/60 shadow-sm rounded-xl"
+    },
+    "navigation": "Sticky header, z-50, backdrop-blur-xl bg-white/70, border-b border-stone-200/50, explicit hover states on text."
+  },
+  "specific_flows": {
+    "donation_split": "Use Shadcn Slider, styled with #7C191E track and #D4AF37 thumb. Show dynamic percentages that adjust other sliders when one moves to ensure total is 100%.",
+    "deity_directory": "Masonry or Bento grid of Deity cards. Use tall portraits with text overlay (gradient to black/50) at bottom."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://static.prod-images.emergentagent.com/jobs/b7b3f7f1-c01f-44f4-b4d4-194659322e25/images/fcbc44d487d0405f32e35926c635c9251f42774a936a7435ffb900085c3a6a2a.png",
+        "category": "hero_background",
+        "description": "Minimalist gold and crimson mandala motif on bone-white. Use in hero section or subscription tier background."
+      },
+      {
+        "url": "https://static.prod-images.emergentagent.com/jobs/b7b3f7f1-c01f-44f4-b4d4-194659322e25/images/fe71a2cadd4f2c97116514c3bc8e5285fc6f0fcbb7f490608d7424102f1da684.png",
+        "category": "marketing_feature",
+        "description": "Abstract sandstone architecture. Use for the 'How it works' or 'The Financial Layer' section background."
+      },
+      {
+        "url": "https://static.prod-images.emergentagent.com/jobs/b7b3f7f1-c01f-44f4-b4d4-194659322e25/images/24b411252e6cd59efaefa8f1614a592b44df9d295e2f9e46c3bddd5b4cc48b34.png",
+        "category": "deity_lakshmi_concept",
+        "description": "Sacred pink lotus macro. Use as a representation or motif for Goddess Lakshmi or general purity."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1634180288740-45c848ef031d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwyfHxoaW5kdSUyMHRlbXBsZSUyMGFyY2hpdGVjdHVyZSUyMG1pbmltYWxpc3R8ZW58MHx8fHwxNzc3Mjg3NjI1fDA&ixlib=rb-4.1.0&q=85",
+        "category": "temple_card",
+        "description": "Minimalist temple architecture for temple listing cards."
+      },
+      {
+        "url": "https://images.pexels.com/photos/33466763/pexels-photo-33466763.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "deity_buddha",
+        "description": "Calm bronze Buddha statue. Use in deity directory for Buddhism category."
+      }
+    ]
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Stroke width 1.5, use primary or text-primary colors."
+  },
+  "instructions_to_main_agent": [
+    "Install Google Fonts: Cormorant Garamond and Manrope.",
+    "Do NOT use standard Shadcn card component for marketing pages. Build custom HTML bento grids with overlapping divs, using the Tetris Mode strategy.",
+    "For the donation split sliders, build a custom interactive component that links values so they never exceed 100%.",
+    "Dashboards should use 'Control Room' tight grid layout (gap-6) with 1px border. No heavy box-shadows. Use a warm off-white background (#F9F6F0) and pure white (#FFFFFF) for the cards.",
+    "Ensure 'data-testid' attributes are attached to all interactive buttons, inputs, links, and forms using kebab-case.",
+    "Do not use emojis anywhere in the UI. Use SVG patterns or the provided image URLs."
+  ]
+}
