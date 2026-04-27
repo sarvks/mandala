@@ -139,6 +139,8 @@ class Temple(BaseModel):
     image_url: str
     description: str
     established: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 class TempleCreate(BaseModel):
     name: str
@@ -657,63 +659,83 @@ SEED_DEITIES = [
 
 SEED_TEMPLES = [
     {"name": "Vaishno Devi Shrine", "city": "Katra", "state": "Jammu & Kashmir", "deity_name": "Goddess Durga",
+     "lat": 32.9911, "lng": 74.9314,
      "image_url": "https://images.unsplash.com/photo-1596402184320-417e7178b2cd?w=1200",
      "description": "Ancient cave shrine nestled in the Trikuta mountains, visited by millions of pilgrims.", "established": "c. 700 CE"},
     {"name": "Dakshineswar Kali Temple", "city": "Kolkata", "state": "West Bengal", "deity_name": "Goddess Durga",
+     "lat": 22.6552, "lng": 88.3577,
      "image_url": "https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=1200",
      "description": "Riverside Bhavatarini temple where Sri Ramakrishna worshipped the Mother.", "established": "1855"},
     {"name": "Kamakhya Temple", "city": "Guwahati", "state": "Assam", "deity_name": "Goddess Durga",
+     "lat": 26.1664, "lng": 91.7055,
      "image_url": "https://images.unsplash.com/photo-1580100586938-02822d99c4a8?w=1200",
      "description": "Revered shakti peetha atop Nilachal Hill, one of the most sacred sites of the Mother.", "established": "c. 8th century"},
     {"name": "Chamundeshwari Temple", "city": "Mysuru", "state": "Karnataka", "deity_name": "Goddess Durga",
+     "lat": 12.2725, "lng": 76.6705,
      "image_url": "https://images.unsplash.com/photo-1567367806137-842e61e5f21b?w=1200",
      "description": "Hilltop temple dedicated to Chamundeshwari, patron deity of the Wodeyars.", "established": "12th century"},
     {"name": "Kalighat Kali Temple", "city": "Kolkata", "state": "West Bengal", "deity_name": "Goddess Kali",
+     "lat": 22.5200, "lng": 88.3420,
      "image_url": "https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=1200",
      "description": "One of 51 Shakti Peethas, among India's oldest Kali shrines.", "established": "1809"},
     {"name": "Tarapith Temple", "city": "Birbhum", "state": "West Bengal", "deity_name": "Goddess Kali",
+     "lat": 23.8916, "lng": 87.7892,
      "image_url": "https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=1200",
      "description": "Tantric shrine of Tara, closely tied to the saint Bamakhepa.", "established": "c. 1225"},
     {"name": "Kashi Vishwanath", "city": "Varanasi", "state": "Uttar Pradesh", "deity_name": "Lord Shiva",
+     "lat": 25.3109, "lng": 83.0107,
      "image_url": "https://images.unsplash.com/photo-1561361398-a8d1ecf5d85b?w=1200",
      "description": "Jyotirlinga on the ghats of the Ganga, heart of Kashi.", "established": "ancient"},
     {"name": "Brihadeeswarar Temple", "city": "Thanjavur", "state": "Tamil Nadu", "deity_name": "Lord Shiva",
+     "lat": 10.7828, "lng": 79.1318,
      "image_url": "https://images.unsplash.com/photo-1582650625119-3a31f8fa2699?w=1200",
      "description": "UNESCO-listed Chola masterpiece, granite grandeur unrivalled.", "established": "1010 CE"},
     {"name": "Kedarnath Temple", "city": "Rudraprayag", "state": "Uttarakhand", "deity_name": "Lord Shiva",
+     "lat": 30.7346, "lng": 79.0669,
      "image_url": "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=1200",
      "description": "Himalayan jyotirlinga accessible only half the year, a pilgrimage of the soul.", "established": "ancient"},
     {"name": "Mahalakshmi Temple Mumbai", "city": "Mumbai", "state": "Maharashtra", "deity_name": "Goddess Lakshmi",
+     "lat": 18.9730, "lng": 72.8090,
      "image_url": "https://images.unsplash.com/photo-1604608672516-f1b9b1d1c0c4?w=1200",
      "description": "Seaside temple of Mahalakshmi, Mahasaraswati and Mahakali.", "established": "1831"},
     {"name": "Padmavathi Temple", "city": "Tiruchanur", "state": "Andhra Pradesh", "deity_name": "Goddess Lakshmi",
+     "lat": 13.6170, "lng": 79.3950,
      "image_url": "https://images.unsplash.com/photo-1604608672516-f1b9b1d1c0c4?w=1200",
      "description": "Consort shrine of Tirupati, revered as Alamelu Mangamma.", "established": "ancient"},
     {"name": "Kolhapur Mahalakshmi", "city": "Kolhapur", "state": "Maharashtra", "deity_name": "Goddess Lakshmi",
+     "lat": 16.6917, "lng": 74.2325,
      "image_url": "https://images.unsplash.com/photo-1604608672516-f1b9b1d1c0c4?w=1200",
      "description": "One of the Shakti Peethas, the Ambabai of Kolhapur.", "established": "7th century"},
     {"name": "Mahabodhi Temple", "city": "Bodh Gaya", "state": "Bihar", "deity_name": "Shakyamuni Buddha",
+     "lat": 24.6961, "lng": 84.9915,
      "image_url": "https://images.pexels.com/photos/33466763/pexels-photo-33466763.jpeg?auto=compress&w=1200",
      "description": "UNESCO site at the place of the Buddha's awakening.", "established": "3rd century BCE"},
     {"name": "Sarnath Mulagandha Kuti Vihar", "city": "Sarnath", "state": "Uttar Pradesh", "deity_name": "Shakyamuni Buddha",
+     "lat": 25.3820, "lng": 83.0245,
      "image_url": "https://images.pexels.com/photos/33466763/pexels-photo-33466763.jpeg?auto=compress&w=1200",
      "description": "Where the Buddha first turned the wheel of Dharma.", "established": "ancient"},
     {"name": "Rumtek Monastery", "city": "Gangtok", "state": "Sikkim", "deity_name": "Avalokiteshvara",
+     "lat": 27.2898, "lng": 88.5619,
      "image_url": "https://images.unsplash.com/photo-1606293459310-6c9d53e3a1c3?w=1200",
      "description": "Seat of the Karmapa lineage, nestled in the eastern Himalayas.", "established": "1966"},
     {"name": "Tawang Monastery", "city": "Tawang", "state": "Arunachal Pradesh", "deity_name": "Avalokiteshvara",
+     "lat": 27.5864, "lng": 91.8594,
      "image_url": "https://images.unsplash.com/photo-1606293459310-6c9d53e3a1c3?w=1200",
      "description": "Largest monastery in India, perched at 3000 m.", "established": "1680"},
     {"name": "Dilwara Temples", "city": "Mount Abu", "state": "Rajasthan", "deity_name": "Tirthankara Mahavira",
+     "lat": 24.6098, "lng": 72.7197,
      "image_url": "https://images.unsplash.com/photo-1604608672516-f1b9b1d1c0c4?w=1200",
      "description": "Marble masterwork of Jain devotion, built 11th to 13th centuries.", "established": "1031"},
     {"name": "Palitana Temples", "city": "Palitana", "state": "Gujarat", "deity_name": "Tirthankara Mahavira",
+     "lat": 21.5222, "lng": 71.8330,
      "image_url": "https://images.unsplash.com/photo-1604608672516-f1b9b1d1c0c4?w=1200",
      "description": "Hundreds of shrines crowning Shatrunjaya Hill, Jainism's holiest peak.", "established": "ancient"},
     {"name": "Sri Harmandir Sahib Golden Temple", "city": "Amritsar", "state": "Punjab", "deity_name": "Guru Nanak Dev Ji",
+     "lat": 31.6200, "lng": 74.8765,
      "image_url": "https://images.unsplash.com/photo-1609254819260-4baa6ac4e394?w=1200",
      "description": "Spiritual centre of Sikhi, gilded sanctum set within the Amrit Sarovar.", "established": "1604"},
     {"name": "Gurudwara Bangla Sahib", "city": "New Delhi", "state": "Delhi", "deity_name": "Guru Nanak Dev Ji",
+     "lat": 28.6255, "lng": 77.2090,
      "image_url": "https://images.unsplash.com/photo-1609254819260-4baa6ac4e394?w=1200",
      "description": "Historic gurudwara associated with Guru Har Krishan.", "established": "1783"},
 ]
@@ -763,11 +785,20 @@ async def seed_database():
                 "image_url": t["image_url"],
                 "description": t["description"],
                 "established": t.get("established"),
+                "lat": t.get("lat"),
+                "lng": t.get("lng"),
             })
             await db.users.update_one({"id": admin_id}, {"$set": {"temple_id": temple_id}})
         if temples:
             await db.temples.insert_many([tt.copy() for tt in temples])
             logging.info("Seeded %d temples", len(temples))
+
+    # Migration: backfill coords on existing temples seeded before the map feature
+    coord_map = {t["name"]: (t["lat"], t["lng"]) for t in SEED_TEMPLES if "lat" in t}
+    async for t in db.temples.find({"$or": [{"lat": {"$exists": False}}, {"lat": None}]}, {"_id": 0, "id": 1, "name": 1}):
+        c = coord_map.get(t["name"])
+        if c:
+            await db.temples.update_one({"id": t["id"]}, {"$set": {"lat": c[0], "lng": c[1]}})
 
     if not await db.users.find_one({"role": "super_admin"}):
         admin_id = str(uuid.uuid4())
@@ -792,6 +823,120 @@ async def seed_database():
             "temple_id": None,
             "created_at": iso(now_utc()),
         })
+
+# ────────── Favourites & Festivals ──────────
+# Festivals are static and resolved by tradition_slug OR deity_name.
+# Dates use the current/next year for the preview — real deployment would
+# pull from a lunar-calendar service.
+FESTIVALS = [
+    {"name": "Navratri (Sharad)", "date": "2026-10-12", "tradition_slug": "shaktism", "deity_name": None,
+     "description": "Nine nights of the Mother — the high festival of Shaktism."},
+    {"name": "Durga Puja", "date": "2026-10-16", "tradition_slug": None, "deity_name": "Goddess Durga",
+     "description": "Mahashashthi to Vijayadashami — five days of darshan."},
+    {"name": "Kali Puja", "date": "2026-11-08", "tradition_slug": None, "deity_name": "Goddess Kali",
+     "description": "New moon night of Kartika — worship of the dark mother."},
+    {"name": "Mahashivratri", "date": "2026-02-15", "tradition_slug": "shaivism", "deity_name": None,
+     "description": "The great night of Shiva — an all-night vigil of chanting."},
+    {"name": "Shravan Somvar", "date": "2026-07-27", "tradition_slug": "shaivism", "deity_name": None,
+     "description": "Mondays of Shravan, especially sacred to Shiva."},
+    {"name": "Diwali · Lakshmi Puja", "date": "2026-11-08", "tradition_slug": "lakshmi", "deity_name": None,
+     "description": "The festival of lights and the welcoming of Mahalakshmi."},
+    {"name": "Varalakshmi Vratam", "date": "2026-08-07", "tradition_slug": None, "deity_name": "Goddess Lakshmi",
+     "description": "Friday vrat invoking Lakshmi for the welfare of the family."},
+    {"name": "Buddha Purnima", "date": "2026-05-01", "tradition_slug": "buddhism", "deity_name": None,
+     "description": "The day of the Buddha's birth, awakening and mahaparinirvana."},
+    {"name": "Kathina Chivara Dana", "date": "2026-10-26", "tradition_slug": "buddhism", "deity_name": None,
+     "description": "End of the monsoon retreat — offering robes to the sangha."},
+    {"name": "Paryushana Parva", "date": "2026-08-27", "tradition_slug": "jainism", "deity_name": None,
+     "description": "Eight days of reflection, fasting and pratikramana."},
+    {"name": "Mahavir Jayanti", "date": "2026-04-09", "tradition_slug": "jainism", "deity_name": None,
+     "description": "Birth anniversary of the 24th Tirthankara."},
+    {"name": "Guru Nanak Jayanti", "date": "2026-11-24", "tradition_slug": "sikhism", "deity_name": None,
+     "description": "Gurpurab honouring the birth of Guru Nanak Dev Ji."},
+    {"name": "Baisakhi", "date": "2026-04-13", "tradition_slug": "sikhism", "deity_name": None,
+     "description": "Harvest festival and the birth of the Khalsa."},
+]
+
+
+@api_router.get("/favourites/me")
+async def list_favourites(user=Depends(get_current_user)):
+    fav_ids = user.get("favourite_temple_ids", []) or []
+    if not fav_ids:
+        return {"temple_ids": [], "temples": []}
+    temples = await db.temples.find({"id": {"$in": fav_ids}}, {"_id": 0}).to_list(500)
+    # preserve insertion order
+    order = {tid: i for i, tid in enumerate(fav_ids)}
+    temples.sort(key=lambda t: order.get(t["id"], 1e9))
+    return {"temple_ids": fav_ids, "temples": temples}
+
+
+@api_router.post("/favourites/{temple_id}/toggle")
+async def toggle_favourite(temple_id: str, user=Depends(get_current_user)):
+    temple = await db.temples.find_one({"id": temple_id}, {"_id": 0, "id": 1})
+    if not temple:
+        raise HTTPException(404, "Temple not found")
+    fav_ids = user.get("favourite_temple_ids", []) or []
+    favourited = temple_id in fav_ids
+    if favourited:
+        fav_ids = [t for t in fav_ids if t != temple_id]
+    else:
+        fav_ids = fav_ids + [temple_id]
+    await db.users.update_one({"id": user["id"]}, {"$set": {"favourite_temple_ids": fav_ids}})
+    return {"favourited": not favourited, "temple_ids": fav_ids}
+
+
+@api_router.get("/notifications/me")
+async def notifications_me(user=Depends(get_current_user)):
+    """Upcoming festivals at the donor's favourite temples (next 12 months)."""
+    fav_ids = user.get("favourite_temple_ids", []) or []
+    if not fav_ids:
+        return {"notifications": []}
+    temples = await db.temples.find({"id": {"$in": fav_ids}}, {"_id": 0}).to_list(500)
+    # Build a map of deity_id -> (deity_name, tradition_slug)
+    deity_ids = list({did for t in temples for did in t.get("deity_ids", [])})
+    deities = await db.deities.find({"id": {"$in": deity_ids}}, {"_id": 0}).to_list(500)
+    deity_by_id = {d["id"]: d for d in deities}
+
+    today = now_utc().date()
+    results = []
+    for t in temples:
+        matched_festivals = []
+        for did in t.get("deity_ids", []):
+            d = deity_by_id.get(did)
+            if not d:
+                continue
+            for f in FESTIVALS:
+                if f["deity_name"] and f["deity_name"] == d["name"]:
+                    matched_festivals.append(f)
+                elif f["tradition_slug"] and f["tradition_slug"] == d["tradition_slug"]:
+                    matched_festivals.append(f)
+        # dedupe by name
+        seen = set()
+        for f in sorted(matched_festivals, key=lambda x: x["date"]):
+            if f["name"] in seen:
+                continue
+            seen.add(f["name"])
+            try:
+                fdate = datetime.fromisoformat(f["date"]).date()
+            except Exception:
+                continue
+            if fdate < today:
+                continue
+            days_until = (fdate - today).days
+            if days_until > 400:
+                continue
+            results.append({
+                "temple_id": t["id"],
+                "temple_name": t["name"],
+                "temple_city": t["city"],
+                "festival": f["name"],
+                "date": f["date"],
+                "days_until": days_until,
+                "description": f["description"],
+            })
+    results.sort(key=lambda r: r["days_until"])
+    return {"notifications": results}
+
 
 # ────────── App wiring ──────────
 app.include_router(api_router)

@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 2 — Map + Favourites + Notifications. Backend: 10/10 new pytest tests passed (lat/lng on /api/temples, /api/favourites/me auth-gated + per-user isolation, POST /api/favourites/{id}/toggle on→off + 404 for invalid id, /api/notifications/me unauth 401, empty for fav-less donor, Vaishno→Durga-only festivals, Kashi adds Shaivism festival; sort ascending by days_until with past-date exclusion). Frontend: /temples renders 20 cards with 20 heart buttons; unauth heart → /login; grid↔map toggle works; Leaflet map shows exactly 3 state clusters + 13 single pins = 16 markers for 20 temples (matches spec); cluster popup lists temples; filter (tradition=shaivism) reduces markers to 3 pins live; authenticated heart click shows 'Saved to your temples' toast; dashboard shows MY TEMPLES stat card, golden 'Upcoming festivals at your temples — 4 sacred days ahead' panel with per-festival days-until badges (e.g. 168D/172D), and 'My Temples' tab lists favourited temple cards with image + city.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/dashboard notifications panel", "issues": ["Festivals are listed once per favourite temple (Navratri appears once for Vaishno Devi and again for Dakshineswar since both are Durga temples). Works as coded but may feel duplicative to donors. Consider grouping: one festival row listing all matching temples."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_favourites_notifications.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/favourites_results.xml"
+  ],
+  "action_items": [
+    "(Optional, polish) Dedupe notifications panel rows by festival name instead of per temple, or group temples under each festival.",
+    "(From iter_1, still open) JWT_SECRET default placeholder in backend/.env must be rotated before prod.",
+    "(From iter_1, still open) server.py now ~970 lines — split into routers/models/seed modules."
+  ],
+  "critical_code_review_comments": [
+    "TemplesMap.jsx useEffect cleanup: map.remove() fires only when the component fully unmounts; toggling grid↔map does unmount the container so this is fine — but if Temples.jsx is ever refactored to keep map mounted, the zero-dep effect will stale-close over an old L instance.",
+    "Backfill migration on startup (lines 797-801 of server.py) runs on every boot; once all temples have coords this is a no-op but still queries. Wrap behind a one-time migration flag or remove after a release.",
+    "/api/notifications/me has no pagination / caching and recomputes festival matching on every call. Acceptable at current scale (≤20 temples, 13 festivals).",
+    "FavouriteButton.jsx: toast.info on unauth is good UX but there's a race — navigate('/login') fires synchronously with toast; on fast routers the toast may be unmounted before paint. Consider setTimeout or returning toast id.",
+    "FESTIVALS list hardcoded to 2026 dates — as noted, MOCKED per spec. After 2026-10-12 (Navratri) etc. the list will yield nothing until dates are refreshed.",
+    "Per-user favourites stored in users.favourite_temple_ids (array). Fine for ≤ a few hundred per user; no index needed yet."
+  ],
+  "updated_files": ["/app/backend/tests/test_favourites_notifications.py (created)"],
+  "success_rate": {"backend": "100% (10/10 new + 23/23 regression)", "frontend": "100% of tested flows"},
+  "test_credentials": "Donor: devotee@mandala.in / devotee123 — verified. Second donor auto-created via /api/auth/signup for isolation test.",
+  "seed_data_creation": "Tests created a handful of test_*@mandala.in donor accounts (left in DB — harmless). Devotee now has 2 persistent favourites from the frontend run (Mahabodhi Temple + Kedarnath, or whichever were visible first in grid).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/ -v` for full regression (existing backend_test.py + new test_favourites_notifications.py = 33 tests). Leaflet tiles DID load successfully from carto CDN on this preview host; markers are divIcons with classes .mandala-cluster / .mandala-pin. Default unfiltered /temples map = 3 clusters (West Bengal x3, Uttar Pradesh x2, Maharashtra x2) + 13 pins = 16 marker elements for 20 temples. Today's UTC date in the container is 2026-04-27, so Feb-2026 festivals (Mahashivratri) are correctly excluded as past. The test file accounts for this via date comparison.",
+  "rca_of_the_issue": "N/A — no bugs found. All 12 features listed in review_request verified working end-to-end."
+}

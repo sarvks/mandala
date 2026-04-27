@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
-import { MapPin, Search, ArrowUpRight, X } from "lucide-react";
+import { MapPin, Search, ArrowUpRight, X, LayoutGrid, Map as MapIcon } from "lucide-react";
+import TemplesMap from "../components/TemplesMap";
+import FavouriteButton from "../components/FavouriteButton";
 
 export default function Temples() {
+  const navigate = useNavigate();
   const [temples, setTemples] = useState([]);
   const [deities, setDeities] = useState([]);
   const [traditions, setTraditions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("grid"); // grid | map
 
   const [query, setQuery] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
@@ -33,10 +37,10 @@ export default function Temples() {
     return m;
   }, [deities]);
 
-  const states = useMemo(() => {
-    const s = Array.from(new Set(temples.map((t) => t.state))).sort();
-    return s;
-  }, [temples]);
+  const states = useMemo(
+    () => Array.from(new Set(temples.map((t) => t.state))).sort(),
+    [temples]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -133,19 +137,41 @@ export default function Temples() {
         </select>
       </div>
 
-      <div className="mb-8 flex items-center justify-between text-sm text-[#475569]">
-        <div data-testid="temples-result-count">
-          Showing <span className="font-medium text-[#1A2436]">{filtered.length}</span> of {temples.length} temples
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <div className="flex items-center gap-4">
+          <div data-testid="temples-result-count" className="text-[#475569]">
+            Showing <span className="font-medium text-[#1A2436]">{filtered.length}</span> of {temples.length} temples
+          </div>
+          {activeFilterCount > 0 && (
+            <button
+              onClick={clearAll}
+              data-testid="temples-clear-filters"
+              className="inline-flex items-center gap-1 text-[#7C191E] hover:underline"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={1.5} /> Clear {activeFilterCount}
+            </button>
+          )}
         </div>
-        {activeFilterCount > 0 && (
+        <div className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-white p-1">
           <button
-            onClick={clearAll}
-            data-testid="temples-clear-filters"
-            className="inline-flex items-center gap-2 text-[#7C191E] hover:underline"
+            onClick={() => setView("grid")}
+            data-testid="temples-view-grid"
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs uppercase tracking-[0.18em] transition ${
+              view === "grid" ? "bg-[#7C191E] text-white" : "text-[#475569] hover:text-[#1A2436]"
+            }`}
           >
-            <X className="h-3.5 w-3.5" strokeWidth={1.5} /> Clear {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}
+            <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} /> Grid
           </button>
-        )}
+          <button
+            onClick={() => setView("map")}
+            data-testid="temples-view-map"
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs uppercase tracking-[0.18em] transition ${
+              view === "map" ? "bg-[#7C191E] text-white" : "text-[#475569] hover:text-[#1A2436]"
+            }`}
+          >
+            <MapIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Map
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -153,7 +179,7 @@ export default function Temples() {
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-stone-200 bg-white p-16 text-center">
           <div className="font-serif text-2xl text-[#1A2436]">No temples match your filters.</div>
-          <p className="mt-2 text-sm text-[#475569]">Try clearing a filter or searching for a different city or deity.</p>
+          <p className="mt-2 text-sm text-[#475569]">Try clearing a filter or searching differently.</p>
           <button
             onClick={clearAll}
             data-testid="temples-clear-filters-empty"
@@ -162,6 +188,15 @@ export default function Temples() {
             Reset filters
           </button>
         </div>
+      ) : view === "map" ? (
+        <TemplesMap
+          temples={filtered}
+          deityMap={deityMap}
+          onTempleClick={(t) => {
+            const d = deityMap[t.deity_ids?.[0]];
+            if (d) navigate(`/deities/${d.id}`);
+          }}
+        />
       ) : (
         <div className="stagger grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => {
@@ -181,6 +216,9 @@ export default function Temples() {
                   />
                   <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-[#1A2436]">
                     {t.state}
+                  </div>
+                  <div className="absolute right-3 top-3">
+                    <FavouriteButton templeId={t.id} size="sm" />
                   </div>
                 </div>
                 <div className="p-6">

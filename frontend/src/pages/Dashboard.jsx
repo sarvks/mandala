@@ -4,13 +4,25 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { toast } from "sonner";
-import { Calendar, HeartHandshake, Repeat, XCircle } from "lucide-react";
+import { Calendar, HeartHandshake, Repeat, XCircle, MapPin, Heart, Bell } from "lucide-react";
+import FavouriteButton from "../components/FavouriteButton";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [donations, setDonations] = useState([]);
   const [subs, setSubs] = useState([]);
+  const [favTemples, setFavTemples] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  const loadFavouritesAndNotifs = async () => {
+    const [f, n] = await Promise.all([
+      api.get("/favourites/me"),
+      api.get("/notifications/me"),
+    ]);
+    setFavTemples(f.data.temples || []);
+    setNotifications(n.data.notifications || []);
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -20,6 +32,8 @@ export default function Dashboard() {
     }
     api.get("/donations/me").then((r) => setDonations(r.data));
     api.get("/subscriptions/me").then((r) => setSubs(r.data));
+    loadFavouritesAndNotifs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading, navigate]);
 
   const cancel = async (id) => {
@@ -45,21 +59,61 @@ export default function Dashboard() {
         <div>
           <p className="label-small text-[#7C191E]">Namaste</p>
           <h1 className="mt-2 font-serif text-5xl text-[#1A2436]">{user.name}</h1>
-          <p className="mt-2 text-[#475569]">Your sankalps and patron subscriptions</p>
+          <p className="mt-2 text-[#475569]">Your sankalps, patron subscriptions and favourite temples</p>
         </div>
         <Link to="/deities" data-testid="dashboard-cta-donate" className="btn-crimson">Make an offering</Link>
       </div>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-3">
+      <div className="mt-10 grid gap-4 sm:grid-cols-4">
         <StatCard icon={HeartHandshake} label="Total offered" value={`₹${totalGiven.toLocaleString("en-IN")}`} />
         <StatCard icon={Calendar} label="Donations" value={donations.length} />
-        <StatCard icon={Repeat} label="Active subscriptions" value={activeSubs.length} />
+        <StatCard icon={Repeat} label="Active subs" value={activeSubs.length} />
+        <StatCard icon={Heart} label="My temples" value={favTemples.length} />
       </div>
+
+      {notifications.length > 0 && (
+        <div
+          data-testid="dashboard-notifications"
+          className="mt-10 rounded-2xl border border-[#D4AF37]/40 bg-[#fdf7e4] p-6"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D4AF37]/30 text-[#7C191E]">
+              <Bell className="h-5 w-5" strokeWidth={1.5} />
+            </div>
+            <div>
+              <div className="label-small text-[#7C191E]">Upcoming festivals at your temples</div>
+              <div className="font-serif text-2xl text-[#1A2436]">{notifications.length} sacred days ahead</div>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {notifications.slice(0, 6).map((n, i) => (
+              <div
+                key={`${n.temple_id}-${n.festival}-${i}`}
+                data-testid={`notif-${i}`}
+                className="rounded-xl border border-[#D4AF37]/30 bg-white p-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="font-serif text-lg text-[#1A2436]">{n.festival}</div>
+                  <span className="rounded-full bg-[#7C191E] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-white">
+                    {n.days_until === 0 ? "Today" : `${n.days_until}d`}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-[#475569]">
+                  {new Date(n.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+                </div>
+                <div className="mt-3 text-sm text-[#1A2436]">{n.temple_name}</div>
+                <div className="text-xs text-[#475569]">{n.temple_city}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="donations" className="mt-12">
         <TabsList data-testid="dashboard-tabs" className="bg-[#F9F6F0]">
           <TabsTrigger value="donations" data-testid="tab-donations">Donations</TabsTrigger>
           <TabsTrigger value="subs" data-testid="tab-subs">Subscriptions</TabsTrigger>
+          <TabsTrigger value="temples" data-testid="tab-temples">My Temples</TabsTrigger>
         </TabsList>
 
         <TabsContent value="donations" className="mt-6">
@@ -139,6 +193,52 @@ export default function Dashboard() {
               ))
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="temples" className="mt-6">
+          {favTemples.length === 0 ? (
+            <div className="rounded-2xl border border-stone-200 bg-white p-10 text-center text-[#475569]">
+              No favourite temples yet.{" "}
+              <Link to="/temples" className="text-[#7C191E] underline">Browse the sacred atlas</Link>{" "}
+              and tap the heart on temples you hold dear.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {favTemples.map((t) => (
+                <article
+                  key={t.id}
+                  data-testid={`fav-temple-${t.id}`}
+                  className="card-surface overflow-hidden"
+                >
+                  <div className="relative h-40 overflow-hidden">
+                    <img src={t.image_url} alt={t.name} className="h-full w-full object-cover" />
+                    <div className="absolute right-3 top-3">
+                      <FavouriteButton templeId={t.id} size="sm" />
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-serif text-lg text-[#1A2436]">{t.name}</h3>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-[#475569]">
+                      <MapPin className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      {t.city}, {t.state}
+                    </div>
+                    <p className="mt-3 line-clamp-2 text-sm text-[#475569]">{t.description}</p>
+                    <div className="mt-4 flex items-center gap-2">
+                      {t.deity_ids?.[0] && (
+                        <Link
+                          to={`/donate/${t.deity_ids[0]}`}
+                          data-testid={`fav-temple-donate-${t.id}`}
+                          className="text-xs uppercase tracking-[0.18em] text-[#7C191E] hover:underline"
+                        >
+                          Offer now →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

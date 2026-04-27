@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { MapPin, ArrowRight, Repeat, HeartHandshake } from "lucide-react";
+import FavouriteButton from "../components/FavouriteButton";
 
 export default function DeityDetail() {
   const { id } = useParams();
@@ -93,6 +94,9 @@ export default function DeityDetail() {
             >
               <div className="relative h-44 overflow-hidden">
                 <img src={t.image_url} alt={t.name} className="h-full w-full object-cover" />
+                <div className="absolute right-3 top-3">
+                  <FavouriteButton templeId={t.id} size="sm" />
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="font-serif text-xl text-[#1A2436]">{t.name}</h3>
