@@ -45,7 +45,7 @@ export default function Footer() {
       </div>
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 px-6 py-6 text-xs text-white/45 md:flex-row md:px-10">
-          <span>© {new Date().getFullYear()} Mandala Sacred Systems</span>
+          <span>© {new Date().getFullYear()} Mahakali Tribunal</span>
           <span>Payments: Razorpay (test · mock)</span>
         </div>
       </div>
