@@ -1260,6 +1260,33 @@ async def demo_accounts():
     ]
 
 
+@api_router.get("/stats/public")
+async def public_stats():
+    """Public homepage counter — no auth."""
+    succ_agg = await db.donations.aggregate([
+        {"$match": {"status": "succeeded"}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_amount"}, "count": {"$sum": 1}}},
+    ]).to_list(1)
+    cause_agg = await db.cause_donations.aggregate([
+        {"$match": {"status": "succeeded"}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_amount"}, "count": {"$sum": 1}}},
+    ]).to_list(1)
+    deity_total = succ_agg[0]["total"] if succ_agg else 0
+    deity_count = succ_agg[0]["count"] if succ_agg else 0
+    cause_total = cause_agg[0]["total"] if cause_agg else 0
+    cause_count = cause_agg[0]["count"] if cause_agg else 0
+    return {
+        "total_offered_inr": deity_total + cause_total,
+        "total_offerings": deity_count + cause_count,
+        "temples": await db.temples.count_documents({}),
+        "deities": await db.deities.count_documents({}),
+        "causes": await db.causes.count_documents({}),
+        "beneficiaries": await db.beneficiaries.count_documents({}),
+        "donors": await db.users.count_documents({"role": "donor"}),
+        "categories": ["religion", "earth", "animal", "human"],
+    }
+
+
 # ────────── Seed Causes ──────────
 SEED_CAUSES = [
     # ── Earth ──
