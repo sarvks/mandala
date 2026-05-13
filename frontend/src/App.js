@@ -16,6 +16,11 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import TempleAdmin from "./pages/TempleAdmin";
 import Traditions from "./pages/Traditions";
+import Causes from "./pages/Causes";
+import CauseDetail from "./pages/CauseDetail";
+import CauseDonate from "./pages/CauseDonate";
+import CauseSubscribe from "./pages/CauseSubscribe";
+import Partner from "./pages/Partner";
 import "./App.css";
 
 function App() {
@@ -39,6 +44,12 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/temple-admin" element={<TempleAdmin />} />
+              <Route path="/partner" element={<Partner />} />
+              <Route path="/causes" element={<Causes />} />
+              <Route path="/causes/category/:category" element={<Causes />} />
+              <Route path="/causes/:id" element={<CauseDetail />} />
+              <Route path="/cause-donate/:causeId" element={<CauseDonate />} />
+              <Route path="/cause-subscribe/:causeId" element={<CauseSubscribe />} />
             </Routes>
           </main>
           <Footer />

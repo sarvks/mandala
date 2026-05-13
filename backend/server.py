@@ -938,6 +938,602 @@ async def notifications_me(user=Depends(get_current_user)):
     return {"notifications": results}
 
 
+# ────────── Causes (Earth · Animal · Human) ──────────
+class Cause(BaseModel):
+    id: str
+    category: Literal["earth", "animal", "human"]
+    name: str
+    slug: str
+    short_desc: str
+    long_desc: str
+    image_url: str
+    featured: bool = False
+    impact_metric: Optional[str] = None  # e.g. "1.2M trees planted"
+
+
+class Beneficiary(BaseModel):
+    id: str
+    category: Literal["earth", "animal", "human"]
+    name: str
+    type: str  # "foundation" | "hospital" | "ngo"
+    cause_ids: List[str]
+    admin_user_id: Optional[str] = None
+    city: str
+    state: str
+    country: str = "India"
+    description: str
+    image_url: str
+    established: Optional[str] = None
+    website: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
+
+class CauseDonationCreate(BaseModel):
+    cause_id: str
+    total_amount: float
+    splits: List[SplitItem]  # split_item.temple_id is used to carry beneficiary_id
+    donor_note: Optional[str] = None
+
+
+class CauseDonation(BaseModel):
+    id: str
+    donor_id: Optional[str]
+    donor_name: str
+    donor_email: str
+    cause_id: str
+    cause_name: str
+    category: str
+    total_amount: float
+    splits: List[SplitItem]
+    status: str
+    payment_ref: str
+    donor_note: Optional[str] = None
+    created_at: str
+
+
+class CauseSubscriptionCreate(BaseModel):
+    cause_id: str
+    kind: Literal["monthly", "tier"]
+    amount: Optional[float] = None
+    tier: Optional[Literal["bronze", "silver", "gold"]] = None
+    splits: List[SplitItem]
+
+
+class CauseSubscription(BaseModel):
+    id: str
+    donor_id: str
+    cause_id: str
+    cause_name: str
+    category: str
+    kind: str
+    amount: float
+    tier: Optional[str] = None
+    splits: List[SplitItem]
+    status: str
+    next_charge_at: str
+    created_at: str
+
+
+@api_router.get("/causes", response_model=List[Cause])
+async def list_causes(category: Optional[str] = None, featured: Optional[bool] = None):
+    q = {}
+    if category and category != "all":
+        q["category"] = category
+    if featured is not None:
+        q["featured"] = featured
+    items = await db.causes.find(q, {"_id": 0}).to_list(200)
+    return items
+
+
+@api_router.get("/causes/{cause_id}", response_model=Cause)
+async def get_cause(cause_id: str):
+    c = await db.causes.find_one({"id": cause_id}, {"_id": 0})
+    if not c:
+        raise HTTPException(404, "Cause not found")
+    return c
+
+
+@api_router.get("/causes/{cause_id}/beneficiaries", response_model=List[Beneficiary])
+async def cause_beneficiaries(cause_id: str):
+    items = await db.beneficiaries.find({"cause_ids": cause_id}, {"_id": 0}).to_list(200)
+    return items
+
+
+@api_router.get("/beneficiaries", response_model=List[Beneficiary])
+async def list_beneficiaries(category: Optional[str] = None):
+    q = {}
+    if category and category != "all":
+        q["category"] = category
+    items = await db.beneficiaries.find(q, {"_id": 0}).to_list(500)
+    return items
+
+
+# Cause donations
+@api_router.post("/cause-donations", response_model=CauseDonation)
+async def create_cause_donation(payload: CauseDonationCreate, user=Depends(get_current_user)):
+    if payload.total_amount < 11:
+        raise HTTPException(400, "Minimum donation is 11")
+    cause = await db.causes.find_one({"id": payload.cause_id}, {"_id": 0})
+    if not cause:
+        raise HTTPException(404, "Cause not found")
+    for s in payload.splits:
+        b = await db.beneficiaries.find_one({"id": s.temple_id}, {"_id": 0})
+        if not b or payload.cause_id not in b.get("cause_ids", []):
+            raise HTTPException(400, f"Beneficiary {s.temple_id} not associated with this cause")
+    _validate_splits(payload.total_amount, payload.splits)
+    donation_id = str(uuid.uuid4())
+    payment_ref = f"mock_rzp_{uuid.uuid4().hex[:16]}"
+    doc = {
+        "id": donation_id,
+        "donor_id": user["id"],
+        "donor_name": user["name"],
+        "donor_email": user["email"],
+        "cause_id": payload.cause_id,
+        "cause_name": cause["name"],
+        "category": cause["category"],
+        "total_amount": payload.total_amount,
+        "splits": [s.model_dump() for s in payload.splits],
+        "status": "pending",
+        "payment_ref": payment_ref,
+        "donor_note": payload.donor_note,
+        "created_at": iso(now_utc()),
+    }
+    await db.cause_donations.insert_one(doc.copy())
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.post("/cause-donations/{donation_id}/confirm", response_model=CauseDonation)
+async def confirm_cause_donation(donation_id: str, user=Depends(get_current_user)):
+    d = await db.cause_donations.find_one({"id": donation_id, "donor_id": user["id"]}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Cause donation not found")
+    if d["status"] == "succeeded":
+        return d
+    await db.cause_donations.update_one(
+        {"id": donation_id},
+        {"$set": {"status": "succeeded", "confirmed_at": iso(now_utc())}},
+    )
+    d["status"] = "succeeded"
+    return d
+
+
+@api_router.get("/cause-donations/me", response_model=List[CauseDonation])
+async def my_cause_donations(user=Depends(get_current_user)):
+    items = await db.cause_donations.find({"donor_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return items
+
+
+@api_router.post("/cause-subscriptions", response_model=CauseSubscription)
+async def create_cause_subscription(payload: CauseSubscriptionCreate, user=Depends(get_current_user)):
+    cause = await db.causes.find_one({"id": payload.cause_id}, {"_id": 0})
+    if not cause:
+        raise HTTPException(404, "Cause not found")
+    if payload.kind == "monthly":
+        if not payload.amount or payload.amount < 51:
+            raise HTTPException(400, "Monthly amount must be at least 51")
+        amount = payload.amount
+        tier = None
+    else:
+        if not payload.tier or payload.tier not in PATRON_TIERS:
+            raise HTTPException(400, "Invalid tier")
+        amount = PATRON_TIERS[payload.tier]["amount"]
+        tier = payload.tier
+    _validate_splits(amount, payload.splits)
+    sub_id = str(uuid.uuid4())
+    doc = {
+        "id": sub_id,
+        "donor_id": user["id"],
+        "cause_id": payload.cause_id,
+        "cause_name": cause["name"],
+        "category": cause["category"],
+        "kind": payload.kind,
+        "amount": amount,
+        "tier": tier,
+        "splits": [s.model_dump() for s in payload.splits],
+        "status": "active",
+        "next_charge_at": iso(now_utc() + timedelta(days=30)),
+        "created_at": iso(now_utc()),
+    }
+    await db.cause_subscriptions.insert_one(doc.copy())
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.get("/cause-subscriptions/me", response_model=List[CauseSubscription])
+async def my_cause_subscriptions(user=Depends(get_current_user)):
+    items = await db.cause_subscriptions.find({"donor_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return items
+
+
+@api_router.post("/cause-subscriptions/{sub_id}/cancel", response_model=CauseSubscription)
+async def cancel_cause_subscription(sub_id: str, user=Depends(get_current_user)):
+    sub = await db.cause_subscriptions.find_one({"id": sub_id, "donor_id": user["id"]}, {"_id": 0})
+    if not sub:
+        raise HTTPException(404, "Subscription not found")
+    await db.cause_subscriptions.update_one({"id": sub_id}, {"$set": {"status": "cancelled"}})
+    sub["status"] = "cancelled"
+    return sub
+
+
+# ────────── Unified Partner Portal ──────────
+# Works for temple_admin (legacy) AND partner (new beneficiaries).
+@api_router.get("/partner/overview")
+async def partner_overview(user=Depends(get_current_user)):
+    role = user.get("role")
+    if role == "temple_admin":
+        temple_id = user.get("temple_id")
+        if not temple_id:
+            raise HTTPException(400, "No associated temple")
+        temple = await db.temples.find_one({"id": temple_id}, {"_id": 0})
+        pipeline = [
+            {"$match": {"status": "succeeded", "splits.temple_id": temple_id}},
+            {"$unwind": "$splits"},
+            {"$match": {"splits.temple_id": temple_id}},
+            {"$group": {"_id": None, "total": {"$sum": "$splits.amount"}, "count": {"$sum": 1}}},
+        ]
+        agg = await db.donations.aggregate(pipeline).to_list(1)
+        totals = agg[0] if agg else {"total": 0, "count": 0}
+        donations = await db.donations.find(
+            {"splits.temple_id": temple_id}, {"_id": 0}
+        ).sort("created_at", -1).to_list(200)
+        rows = []
+        for d in donations:
+            share = next((s for s in d.get("splits", []) if s["temple_id"] == temple_id), None)
+            if share:
+                rows.append({
+                    "donation_id": d["id"],
+                    "donor_name": d["donor_name"],
+                    "context_name": d["deity_name"],
+                    "share_amount": share["amount"],
+                    "share_percentage": share["percentage"],
+                    "total_amount": d["total_amount"],
+                    "status": d["status"],
+                    "created_at": d["created_at"],
+                })
+        return {
+            "role": "temple_admin",
+            "kind": "temple",
+            "entity": temple,
+            "total_received_inr": totals.get("total", 0),
+            "donation_count": totals.get("count", 0),
+            "donations": rows,
+        }
+    if role == "partner":
+        ben_id = user.get("beneficiary_id")
+        if not ben_id:
+            raise HTTPException(400, "No associated beneficiary")
+        beneficiary = await db.beneficiaries.find_one({"id": ben_id}, {"_id": 0})
+        pipeline = [
+            {"$match": {"status": "succeeded", "splits.temple_id": ben_id}},
+            {"$unwind": "$splits"},
+            {"$match": {"splits.temple_id": ben_id}},
+            {"$group": {"_id": None, "total": {"$sum": "$splits.amount"}, "count": {"$sum": 1}}},
+        ]
+        agg = await db.cause_donations.aggregate(pipeline).to_list(1)
+        totals = agg[0] if agg else {"total": 0, "count": 0}
+        donations = await db.cause_donations.find(
+            {"splits.temple_id": ben_id}, {"_id": 0}
+        ).sort("created_at", -1).to_list(200)
+        rows = []
+        for d in donations:
+            share = next((s for s in d.get("splits", []) if s["temple_id"] == ben_id), None)
+            if share:
+                rows.append({
+                    "donation_id": d["id"],
+                    "donor_name": d["donor_name"],
+                    "context_name": d["cause_name"],
+                    "share_amount": share["amount"],
+                    "share_percentage": share["percentage"],
+                    "total_amount": d["total_amount"],
+                    "status": d["status"],
+                    "created_at": d["created_at"],
+                })
+        return {
+            "role": "partner",
+            "kind": "beneficiary",
+            "entity": beneficiary,
+            "total_received_inr": totals.get("total", 0),
+            "donation_count": totals.get("count", 0),
+            "donations": rows,
+        }
+    raise HTTPException(403, "Only temple admins or partners can view this")
+
+
+@api_router.get("/demo-accounts")
+async def demo_accounts():
+    """Public — returns one-click login credentials for the preview."""
+    return [
+        {"role": "Super Admin", "email": "admin@mandala.in", "password": "mandala123",
+         "tagline": "Full control room: deities, temples, causes, partners and analytics."},
+        {"role": "Donor", "email": "devotee@mandala.in", "password": "devotee123",
+         "tagline": "Make offerings, manage subscriptions, track favourites."},
+        {"role": "Temple Admin", "email": "temple.vaishnodevishrine@mandala.in", "password": "temple123",
+         "tagline": "View incoming offerings at Vaishno Devi Shrine."},
+        {"role": "Partner · Earth", "email": "partner.sankalptarufoundation@mandala.in", "password": "partner123",
+         "tagline": "View incoming donations at SankalpTaru Foundation."},
+        {"role": "Partner · Animals", "email": "partner.wildlifesos@mandala.in", "password": "partner123",
+         "tagline": "View incoming donations at Wildlife SOS."},
+        {"role": "Partner · Humans", "email": "partner.prathameducationfoundati@mandala.in", "password": "partner123",
+         "tagline": "View incoming donations at Pratham Education."},
+    ]
+
+
+# ────────── Seed Causes ──────────
+SEED_CAUSES = [
+    # ── Earth ──
+    {"category": "earth", "slug": "forest-wildlife", "name": "Forest & Wildlife Restoration", "featured": True,
+     "short_desc": "Plant native forests, restore wildlife corridors, protect endangered species.",
+     "long_desc": "From the Western Ghats to the Eastern Himalayas, restoration projects need consistent funding to plant native forest cover, fund patrols against poaching, and rewild degraded land. Your offering reaches all four partners simultaneously.",
+     "image_url": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1200",
+     "impact_metric": "1.2M+ trees planted by partner network"},
+    {"category": "earth", "slug": "climate-action", "name": "Climate Action & Clean Energy", "featured": True,
+     "short_desc": "Solar electrification, carbon offset and climate literacy across rural India.",
+     "long_desc": "Tackling climate change at the village level — solar microgrids, energy access for the poor, and large-scale carbon offset programmes via verified partners.",
+     "image_url": "https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=1200",
+     "impact_metric": "120K rural homes solar-powered"},
+    {"category": "earth", "slug": "clean-water", "name": "Clean Rivers & Oceans", "featured": False,
+     "short_desc": "River clean-ups, coastal protection and sustainable waste management.",
+     "long_desc": "From the Ganga and Yamuna to India's 7,500 km coastline, restoration partners need fuel for the long-haul work of recovering our waters.",
+     "image_url": "https://images.unsplash.com/photo-1583212292454-1fe6229603b7?w=1200",
+     "impact_metric": "8,400 tonnes of plastic recovered"},
+    # ── Animal ──
+    {"category": "animal", "slug": "stray-care", "name": "Stray Care & Sterilisation", "featured": True,
+     "short_desc": "Sterilisation, vaccination and shelter for India's stray dogs and cats.",
+     "long_desc": "Compassionate ABC (animal birth control) campaigns and round-the-clock shelters that turn the tide on stray suffering.",
+     "image_url": "https://images.unsplash.com/photo-1583511655802-41700a4e1953?w=1200",
+     "impact_metric": "90K animals sterilised annually"},
+    {"category": "animal", "slug": "wildlife-rescue", "name": "Wildlife Rescue & Rehabilitation", "featured": True,
+     "short_desc": "Rescue elephants, bears, leopards and reptiles — rehabilitate, release where possible.",
+     "long_desc": "Specialised teams across India that respond to wildlife crises — from rescuing dancing bears to relocating leopards out of urban India.",
+     "image_url": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200",
+     "impact_metric": "2,300+ animals rescued"},
+    {"category": "animal", "slug": "avian-marine", "name": "Avian & Marine Sanctuary", "featured": False,
+     "short_desc": "Bird hospitals, sea turtle conservation and reef protection.",
+     "long_desc": "Vulnerable creatures — Olive Ridley turtles, urban birds, coral reefs of the Andamans — protected by dedicated, under-funded teams.",
+     "image_url": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=1200",
+     "impact_metric": "44K turtle hatchlings released"},
+    # ── Human ──
+    {"category": "human", "slug": "education-for-all", "name": "Education for Every Child", "featured": True,
+     "short_desc": "Mid-day meals, foundational literacy and teacher training across underserved schools.",
+     "long_desc": "Programmes that put a hot meal, a competent teacher and an early reading start in front of every Indian child — the surest path out of poverty.",
+     "image_url": "https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=1200",
+     "impact_metric": "5M+ children supported each year"},
+    {"category": "human", "slug": "womens-health", "name": "Women's Health & Livelihood", "featured": True,
+     "short_desc": "Menstrual hygiene, women's shelters and self-employed livelihoods.",
+     "long_desc": "Anchored in self-help groups and shelters, these programmes restore dignity and economic independence to women across rural and urban India.",
+     "image_url": "https://images.unsplash.com/photo-1573497019418-b400bb3ab074?w=1200",
+     "impact_metric": "1.8M women in self-help groups"},
+    {"category": "human", "slug": "hunger-relief", "name": "Hunger Relief & Elder Care", "featured": False,
+     "short_desc": "Community kitchens, food banking and care for the elderly.",
+     "long_desc": "Direct, dignified hunger relief — including India's most loved volunteer-run kitchens and food banks — and care for our forgotten elderly.",
+     "image_url": "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=1200",
+     "impact_metric": "12M meals served yearly"},
+]
+
+# slug → list of 4 beneficiaries
+SEED_BENEFICIARIES = {
+    "forest-wildlife": [
+        {"name": "SankalpTaru Foundation", "type": "ngo", "city": "Haridwar", "state": "Uttarakhand", "lat": 29.9457, "lng": 78.1642,
+         "description": "Plants native tree species across 27 states with geotagged tracking.", "established": "2013",
+         "website": "sankalptaru.org",
+         "image_url": "https://images.unsplash.com/photo-1444930694458-01babe71870e?w=1000"},
+        {"name": "Project Tiger Fund", "type": "foundation", "city": "Nagpur", "state": "Maharashtra", "lat": 21.1458, "lng": 79.0882,
+         "description": "Patrols, anti-poaching units and habitat work across Tiger Reserves.", "established": "1973",
+         "website": "ntca.gov.in",
+         "image_url": "https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=1000"},
+        {"name": "Wildlife Trust of India", "type": "ngo", "city": "Noida", "state": "Uttar Pradesh", "lat": 28.5355, "lng": 77.3910,
+         "description": "Rescues displaced wildlife and runs elephant corridors.", "established": "1998",
+         "website": "wti.org.in",
+         "image_url": "https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=1000"},
+        {"name": "Junglescapes", "type": "ngo", "city": "Bandipur", "state": "Karnataka", "lat": 11.6717, "lng": 76.6286,
+         "description": "Restores degraded forest corridors at the edges of Bandipur & Nagarhole.", "established": "2010",
+         "website": "junglescapes.org",
+         "image_url": "https://images.unsplash.com/photo-1511497584788-876760111969?w=1000"},
+    ],
+    "climate-action": [
+        {"name": "SELCO Foundation", "type": "foundation", "city": "Bengaluru", "state": "Karnataka", "lat": 12.9716, "lng": 77.5946,
+         "description": "Solar electrification for the rural poor — schools, clinics, livelihoods.", "established": "2010",
+         "website": "selcofoundation.org",
+         "image_url": "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=1000"},
+        {"name": "Centre for Sustainable Development", "type": "foundation", "city": "Bengaluru", "state": "Karnataka", "lat": 12.9352, "lng": 77.6245,
+         "description": "Designs solar villages and trains rural women as energy entrepreneurs.", "established": "2008",
+         "website": "csd.org.in",
+         "image_url": "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=1000"},
+        {"name": "Plan B Earth Initiative", "type": "ngo", "city": "Pune", "state": "Maharashtra", "lat": 18.5204, "lng": 73.8567,
+         "description": "Carbon offset via verified urban afforestation and waste-to-energy.", "established": "2017",
+         "website": "planbearth.in",
+         "image_url": "https://images.unsplash.com/photo-1532601224476-15c79f2f7a51?w=1000"},
+        {"name": "Climate Reality Project India", "type": "ngo", "city": "New Delhi", "state": "Delhi", "lat": 28.6139, "lng": 77.2090,
+         "description": "Trains thousands of climate leaders across India each year.", "established": "2017",
+         "website": "climaterealityindia.org",
+         "image_url": "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1000"},
+    ],
+    "clean-water": [
+        {"name": "Ganga Action Foundation", "type": "foundation", "city": "Varanasi", "state": "Uttar Pradesh", "lat": 25.3176, "lng": 82.9739,
+         "description": "Riverbank clean-ups, awareness yatras and effluent monitoring along the Ganga.", "established": "2013",
+         "website": "gangaaction.org",
+         "image_url": "https://images.unsplash.com/photo-1545048702-79362596cdc9?w=1000"},
+        {"name": "Hasiru Dala", "type": "ngo", "city": "Bengaluru", "state": "Karnataka", "lat": 12.9716, "lng": 77.5946,
+         "description": "Waste-pickers' cooperative — formalising livelihoods, recycling 1,000+ tonnes/month.", "established": "2010",
+         "website": "hasirudala.in",
+         "image_url": "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=1000"},
+        {"name": "The Indian Coastal Trust", "type": "ngo", "city": "Chennai", "state": "Tamil Nadu", "lat": 13.0827, "lng": 80.2707,
+         "description": "Coastal clean-ups and mangrove restoration along India's east coast.", "established": "2015",
+         "website": "coastalindia.org",
+         "image_url": "https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?w=1000"},
+        {"name": "Yamuna Mission", "type": "ngo", "city": "New Delhi", "state": "Delhi", "lat": 28.6139, "lng": 77.2810,
+         "description": "Citizen-led monitoring, drain interception and restoration along the Yamuna.", "established": "2019",
+         "website": "yamunamission.in",
+         "image_url": "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=1000"},
+    ],
+    "stray-care": [
+        {"name": "Friendicoes SECA", "type": "hospital", "city": "New Delhi", "state": "Delhi", "lat": 28.5535, "lng": 77.2588,
+         "description": "Shelter, hospital and ambulance for street animals — runs since 1979.", "established": "1979",
+         "website": "friendicoes.org",
+         "image_url": "https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=1000"},
+        {"name": "PFA Hyderabad", "type": "hospital", "city": "Hyderabad", "state": "Telangana", "lat": 17.3850, "lng": 78.4867,
+         "description": "ABC sterilisation centre and 24/7 animal ambulance for Hyderabad's strays.", "established": "1996",
+         "website": "pfahyderabad.com",
+         "image_url": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=1000"},
+        {"name": "CUPA — Compassion Unlimited Plus Action", "type": "ngo", "city": "Bengaluru", "state": "Karnataka", "lat": 12.9716, "lng": 77.5946,
+         "description": "Rehab centre, second-chance adoption and ABC across Bengaluru.", "established": "1991",
+         "website": "cupabangalore.org",
+         "image_url": "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=1000"},
+        {"name": "Welfare of Stray Dogs (WSD)", "type": "ngo", "city": "Mumbai", "state": "Maharashtra", "lat": 19.0760, "lng": 72.8777,
+         "description": "Pioneered the ABC model in Mumbai — over 100K sterilisations to date.", "established": "1989",
+         "website": "wsdindia.org",
+         "image_url": "https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=1000"},
+    ],
+    "wildlife-rescue": [
+        {"name": "Wildlife SOS", "type": "ngo", "city": "Agra", "state": "Uttar Pradesh", "lat": 27.1767, "lng": 78.0081,
+         "description": "Rescued every dancing bear in India; now runs the world's largest elephant rehab.", "established": "1995",
+         "website": "wildlifesos.org",
+         "image_url": "https://images.unsplash.com/photo-1466721591366-2d5fba72006d?w=1000"},
+        {"name": "Madras Crocodile Bank Trust", "type": "ngo", "city": "Chennai", "state": "Tamil Nadu", "lat": 12.7990, "lng": 80.2502,
+         "description": "Reptile conservation, research and the world's largest crocodile breeding centre.", "established": "1976",
+         "website": "madrascrocodilebank.org",
+         "image_url": "https://images.unsplash.com/photo-1583511666372-62fc211f8377?w=1000"},
+        {"name": "BSPCA Mumbai", "type": "hospital", "city": "Mumbai", "state": "Maharashtra", "lat": 18.9750, "lng": 72.8258,
+         "description": "Bombay Society for Prevention of Cruelty to Animals — full-service hospital since 1874.", "established": "1874",
+         "website": "thebspca.org",
+         "image_url": "https://images.unsplash.com/photo-1583336663277-620dc1996580?w=1000"},
+        {"name": "Wildlife Conservation Trust", "type": "foundation", "city": "Mumbai", "state": "Maharashtra", "lat": 19.0760, "lng": 72.8777,
+         "description": "Tiger landscape conservation and forest staff welfare across 23 reserves.", "established": "2002",
+         "website": "wildlifeconservationtrust.org",
+         "image_url": "https://images.unsplash.com/photo-1551244072-5d12893278ab?w=1000"},
+    ],
+    "avian-marine": [
+        {"name": "Jivdaya Charitable Trust", "type": "hospital", "city": "Ahmedabad", "state": "Gujarat", "lat": 23.0225, "lng": 72.5714,
+         "description": "Jain-run sanctuary and hospital — handles 60K+ injured birds yearly.", "established": "1995",
+         "website": "jivdayatrust.org",
+         "image_url": "https://images.unsplash.com/photo-1444930694458-01babe71870e?w=1000"},
+        {"name": "Olive Ridley Conservation Project", "type": "ngo", "city": "Puri", "state": "Odisha", "lat": 19.8135, "lng": 85.8312,
+         "description": "Patrols the Gahirmatha beach, India's largest Olive Ridley turtle rookery.", "established": "2003",
+         "website": "oliveridleyproject.org",
+         "image_url": "https://images.unsplash.com/photo-1573865526739-10c1d24aef3f?w=1000"},
+        {"name": "Charity Birds Hospital Delhi", "type": "hospital", "city": "New Delhi", "state": "Delhi", "lat": 28.6519, "lng": 77.2315,
+         "description": "Jain-run avian hospital at Digambar Jain Lal Mandir, treating ~15K birds a year.", "established": "1956",
+         "website": "charitybirdshospital.org",
+         "image_url": "https://images.unsplash.com/photo-1444930694458-01babe71870e?w=1000"},
+        {"name": "ReefWatch Marine Conservation", "type": "ngo", "city": "Port Blair", "state": "Andaman & Nicobar", "lat": 11.6234, "lng": 92.7265,
+         "description": "Coral reef restoration in the Andamans — first coral nursery in India.", "established": "1993",
+         "website": "reefwatchindia.org",
+         "image_url": "https://images.unsplash.com/photo-1535930891776-0c2dfb7fda1a?w=1000"},
+    ],
+    "education-for-all": [
+        {"name": "Pratham Education Foundation", "type": "foundation", "city": "Mumbai", "state": "Maharashtra", "lat": 19.0760, "lng": 72.8777,
+         "description": "India's largest learning programme — ASER report and foundational literacy.", "established": "1995",
+         "website": "pratham.org",
+         "image_url": "https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=1000"},
+        {"name": "Akshaya Patra Foundation", "type": "foundation", "city": "Bengaluru", "state": "Karnataka", "lat": 12.9716, "lng": 77.5946,
+         "description": "World's largest mid-day meal NGO — serves 2M+ school children daily.", "established": "2000",
+         "website": "akshayapatra.org",
+         "image_url": "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1000"},
+        {"name": "Teach For India", "type": "ngo", "city": "Mumbai", "state": "Maharashtra", "lat": 19.0760, "lng": 72.8777,
+         "description": "Two-year teaching fellowship in low-income classrooms across 8 cities.", "established": "2008",
+         "website": "teachforindia.org",
+         "image_url": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1000"},
+        {"name": "CRY — Child Rights and You", "type": "foundation", "city": "New Delhi", "state": "Delhi", "lat": 28.6139, "lng": 77.2090,
+         "description": "Restoring childhoods — fights child labour, child marriage, supports education.", "established": "1979",
+         "website": "cry.org",
+         "image_url": "https://images.unsplash.com/photo-1497375638960-ca368c7231e4?w=1000"},
+    ],
+    "womens-health": [
+        {"name": "SEWA — Self-Employed Women's Association", "type": "foundation", "city": "Ahmedabad", "state": "Gujarat", "lat": 23.0225, "lng": 72.5714,
+         "description": "Trade union of 2M+ self-employed women workers across India.", "established": "1972",
+         "website": "sewa.org",
+         "image_url": "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=1000"},
+        {"name": "Goonj", "type": "ngo", "city": "New Delhi", "state": "Delhi", "lat": 28.5450, "lng": 77.1928,
+         "description": "Dignity-driven dispatch — clothes, menstrual hygiene kits, disaster relief.", "established": "1999",
+         "website": "goonj.org",
+         "image_url": "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=1000"},
+        {"name": "Snehalaya", "type": "ngo", "city": "Ahmednagar", "state": "Maharashtra", "lat": 19.0948, "lng": 74.7480,
+         "description": "Rehabilitation for women & children rescued from human trafficking.", "established": "1989",
+         "website": "snehalaya.org",
+         "image_url": "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1000"},
+        {"name": "Sangini Trust", "type": "ngo", "city": "Mumbai", "state": "Maharashtra", "lat": 19.0760, "lng": 72.8777,
+         "description": "Maternal health and adolescent girls' wellbeing in urban slums.", "established": "2002",
+         "website": "saheli-women.org",
+         "image_url": "https://images.unsplash.com/photo-1573497019418-b400bb3ab074?w=1000"},
+    ],
+    "hunger-relief": [
+        {"name": "Robin Hood Army", "type": "ngo", "city": "New Delhi", "state": "Delhi", "lat": 28.6139, "lng": 77.2090,
+         "description": "Zero-funds volunteer army that redistributes surplus food in 400+ cities.", "established": "2014",
+         "website": "robinhoodarmy.com",
+         "image_url": "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=1000"},
+        {"name": "India Food Banking Network", "type": "foundation", "city": "New Delhi", "state": "Delhi", "lat": 28.6139, "lng": 77.2090,
+         "description": "National food banking network — rescues and redistributes food to NGOs.", "established": "2012",
+         "website": "indiafoodbanking.org",
+         "image_url": "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1000"},
+        {"name": "HelpAge India", "type": "foundation", "city": "New Delhi", "state": "Delhi", "lat": 28.6139, "lng": 77.2090,
+         "description": "Elder care: helplines, mobile healthcare units and elder homes.", "established": "1978",
+         "website": "helpageindia.org",
+         "image_url": "https://images.unsplash.com/photo-1518398046578-8cca57782e17?w=1000"},
+        {"name": "Goonj Disaster Aid", "type": "ngo", "city": "New Delhi", "state": "Delhi", "lat": 28.5450, "lng": 77.1928,
+         "description": "Rapid disaster aid — Kerala, Sikkim, Uttarakhand and beyond.", "established": "1999",
+         "website": "goonj.org",
+         "image_url": "https://images.unsplash.com/photo-1525373698358-041e3a460346?w=1000"},
+    ],
+}
+
+
+async def seed_causes_and_beneficiaries():
+    if await db.causes.count_documents({}) > 0:
+        return
+    cause_docs = []
+    cause_id_by_slug = {}
+    for c in SEED_CAUSES:
+        cid = str(uuid.uuid4())
+        cause_id_by_slug[c["slug"]] = cid
+        cause_docs.append({"id": cid, **c})
+    await db.causes.insert_many([c.copy() for c in cause_docs])
+    logging.info("Seeded %d causes", len(cause_docs))
+
+    ben_docs = []
+    for slug, items in SEED_BENEFICIARIES.items():
+        cid = cause_id_by_slug.get(slug)
+        cat = next((c["category"] for c in SEED_CAUSES if c["slug"] == slug), None)
+        if not cid or not cat:
+            continue
+        for b in items:
+            ben_id = str(uuid.uuid4())
+            safe = "".join(ch for ch in b["name"].lower() if ch.isalnum())[:24]
+            partner_email = f"partner.{safe}@mandala.in"
+            partner_id = str(uuid.uuid4())
+            await db.users.insert_one({
+                "id": partner_id,
+                "name": f"Partner - {b['name']}",
+                "email": partner_email,
+                "password_hash": hash_password("partner123"),
+                "role": "partner",
+                "beneficiary_id": None,
+                "created_at": iso(now_utc()),
+            })
+            ben_docs.append({
+                "id": ben_id,
+                "category": cat,
+                "name": b["name"],
+                "type": b["type"],
+                "cause_ids": [cid],
+                "admin_user_id": partner_id,
+                "city": b["city"],
+                "state": b["state"],
+                "country": b.get("country", "India"),
+                "description": b["description"],
+                "image_url": b["image_url"],
+                "established": b.get("established"),
+                "website": b.get("website"),
+                "lat": b.get("lat"),
+                "lng": b.get("lng"),
+            })
+            await db.users.update_one({"id": partner_id}, {"$set": {"beneficiary_id": ben_id}})
+    if ben_docs:
+        await db.beneficiaries.insert_many([b.copy() for b in ben_docs])
+        logging.info("Seeded %d beneficiaries", len(ben_docs))
+
+
 # ────────── App wiring ──────────
 app.include_router(api_router)
 
@@ -959,6 +1555,7 @@ logger = logging.getLogger(__name__)
 async def startup_event():
     try:
         await seed_database()
+        await seed_causes_and_beneficiaries()
     except Exception:
         logger.exception("Seeding failed")
 

@@ -62,6 +62,9 @@ export default function Navbar() {
           <NavLink to="/temples" data-testid="nav-temples" className={navItem}>
             Temples
           </NavLink>
+          <NavLink to="/causes" data-testid="nav-causes" className={navItem}>
+            Causes
+          </NavLink>
           <NavLink to="/traditions" data-testid="nav-traditions" className={navItem}>
             Traditions
           </NavLink>
@@ -74,8 +77,13 @@ export default function Navbar() {
             </NavLink>
           )}
           {user?.role === "temple_admin" && (
-            <NavLink to="/temple-admin" data-testid="nav-temple-admin" className={navItem}>
+            <NavLink to="/partner" data-testid="nav-temple-admin" className={navItem}>
               Temple Desk
+            </NavLink>
+          )}
+          {user?.role === "partner" && (
+            <NavLink to="/partner" data-testid="nav-partner" className={navItem}>
+              Partner Desk
             </NavLink>
           )}
           {user?.role === "donor" && (
@@ -144,6 +152,9 @@ export default function Navbar() {
             <Link to="/temples" data-testid="mobile-nav-temples" onClick={() => setOpen(false)}>
               Temples
             </Link>
+            <Link to="/causes" data-testid="mobile-nav-causes" onClick={() => setOpen(false)}>
+              Causes
+            </Link>
             <Link to="/traditions" data-testid="mobile-nav-traditions" onClick={() => setOpen(false)}>
               Traditions
             </Link>
@@ -161,8 +172,13 @@ export default function Navbar() {
               </Link>
             )}
             {user?.role === "temple_admin" && (
-              <Link to="/temple-admin" data-testid="mobile-nav-temple-admin" onClick={() => setOpen(false)}>
+              <Link to="/partner" data-testid="mobile-nav-temple-admin" onClick={() => setOpen(false)}>
                 Temple Desk
+              </Link>
+            )}
+            {user?.role === "partner" && (
+              <Link to="/partner" data-testid="mobile-nav-partner" onClick={() => setOpen(false)}>
+                Partner Desk
               </Link>
             )}
             {user ? (

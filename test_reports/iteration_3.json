@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 3 — Causes/Beneficiaries + Demo Accounts + unified Partner Portal. 24/24 new pytest tests passed. Backend verified: 9 causes (3 per category), 36 beneficiaries (12 per category), 4 beneficiaries per cause, /demo-accounts returns 6 records and all 6 emails authenticate via /auth/login. Cause donations: create→confirm flow works, mock_rzp_ ref returned, 400 on bad percentages, 400 when split.temple_id is a beneficiary not in cause.cause_ids. Cause subscriptions: monthly ₹501 + tier silver auto-₹1501 + cancel → cancelled. /partner/overview returns kind=temple for temple_admin (Vaishno Devi), kind=beneficiary for partner accounts (SankalpTaru / Wildlife SOS / Pratham), 403 for donor. End-to-end aggregation verified: confirmed cause donation of ₹1000 to SankalpTaru raised total_received_inr by ≥₹1000 on the partner's overview. Frontend verified: /causes shows 9 cards with 4 filter chips (All/Earth/Animals/Humans); Earth filter narrows to 3 cards; /causes/category/earth URL also shows 3 cards; cause detail shows 4 beneficiary cards with 'Donate now' (cause-donate-btn) and 'Monthly subscription' (cause-subscribe-btn). /login has demo-accounts-panel with exactly 6 demo-login-{email} buttons; each routes correctly — super_admin→/admin, donor→/dashboard, temple_admin AND partner→/partner. /partner page renders entity name, location, website, ₹ total share, offerings touched, and donations table with 'Cause' column listing 'Forest & Wildlife Restoration' (and for temple_admin a deity column with 'Goddess Durga'). /cause-donate/{id} renders preset amount chips, 4-row SplitAllocator with re-balancing sliders summing to 100%, note field, Pay securely → 'Offering received' success screen with mock_rzp_ ref and per-beneficiary split breakdown. Dashboard merges cause donations into the Donations tab (Forest & Wildlife rows appear alongside Goddess Durga rows, sorted desc by date). Navbar shows Causes link for everyone, Partner Desk link for partner role, Temple Desk-equivalent ('Partner Desk') for temple_admin. Landing has 'Beyond the temple' teaser text.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/login Demo accounts panel", "issues": ["In the 2-column grid, the right-edge 'SIGN IN →' link overlaps the multi-line role titles 'Partner · Earth', 'Partner · Animals', 'Partner · Humans' (and slightly Donor/Temple Admin) — the SIGN IN button is absolutely positioned and collides with wrapped role text. Consider stacking the SIGN IN below the role label, or right-aligning the role title with overflow protection."]},
+      {"screen": "Navbar (temple_admin session)", "issues": ["For temple_admin the nav shows 'Partner Desk' label (not the 'Temple Desk' wording mentioned in the spec). Both link to /partner so behaviour is correct; only the label differs. Consider conditional label: temple_admin → 'Temple Desk', partner → 'Partner Desk'."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_causes_partner.py",
+    "/app/test_reports/pytest/causes_partner_results.xml"
+  ],
+  "action_items": [
+    "(Polish) Fix overlap in DemoAccountsPanel where 'SIGN IN →' positions over wrapped role labels (Partner · Earth/Animals/Humans).",
+    "(Polish) Differentiate navbar label between temple_admin ('Temple Desk') and partner ('Partner Desk') — currently both render 'Partner Desk'.",
+    "(From iter_2, still open) server.py is ~1564 lines now (was ~970) — past the 700-line threshold, should be split into routers (causes_router.py, partner_router.py, seed.py).",
+    "(From iter_1, still open) JWT_SECRET default placeholder in backend/.env must be rotated before prod."
+  ],
+  "critical_code_review_comments": [
+    "SplitItem.temple_id field is intentionally reused for beneficiary_id in cause donations (per spec). Works, but the schema is misleading for future devs. Recommend renaming to recipient_id or adding a model alias with explicit beneficiary_id field for cause donations.",
+    "/api/partner/overview: separate code paths for temple_admin vs partner are clear but duplicate the aggregation skeleton. Extracting a _aggregate_share(splits_match_id, collection) helper would DRY ~30 lines.",
+    "seed_causes_and_beneficiaries inserts partner users with password 'partner123' (matches spec/demo). Acceptable for demo but should be flagged so it never runs against a production DB — gate behind ENV=demo.",
+    "GET /api/demo-accounts is a public endpoint listing valid email+password pairs. Acceptable for a demo build but MUST be removed or gated behind a feature flag before production.",
+    "SplitAllocator on /cause-donate uses hidden native range inputs — accessible to keyboard but Playwright's input[type='range'] selector returns 0 because they're visually styled (custom thumb). Add data-testid='split-slider-{idx}' to each input for testability.",
+    "Cause-donation success screen and deity-donation success screen share most layout — extract <DonationReceipt /> component to avoid drift."
+  ],
+  "updated_files": ["/app/backend/tests/test_causes_partner.py (created)"],
+  "success_rate": {"backend": "100% (24/24 new + earlier regression unchanged)", "frontend": "100% of tested flows"},
+  "test_credentials": "All 6 demo accounts authenticate. Verified per /app/memory/test_credentials.md: admin@mandala.in/mandala123, devotee@mandala.in/devotee123, temple.vaishnodevishrine@mandala.in/temple123, partner.sankalptarufoundation/wildlifesos/prathameducationfoundati@mandala.in / partner123.",
+  "seed_data_creation": "Tests created 1 cause donation (₹1000, SankalpTaru, succeeded) + 1 cause donation (₹1000 split across 4 partners, succeeded) + 1 cause donation (₹500, 4 splits, succeeded) + 2 cause subscriptions (₹501 monthly active, ₹1501 silver cancelled) + 1 frontend cause donation (₹501 split 4 ways, succeeded) on devotee@mandala.in. Partner SankalpTaru now shows ₹1,525 total share / 3 incoming offerings.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/ -v` for full regression — 3 test files now: backend_test.py (legacy 23), test_favourites_notifications.py (10), test_causes_partner.py (24) = 57 tests. SplitItem.temple_id field carries beneficiary_id for cause-donations (intentional, per spec). devotee@mandala.in now has 6 succeeded donations (mix of Goddess Durga deity donations + Forest & Wildlife cause donations) and 4 active/cancelled subscriptions visible in /dashboard. Today's container UTC date is 2026-05-13. The /admin-only /demo-accounts endpoint is fine for demo but should be feature-flagged for prod.",
+  "rca_of_the_issue": "N/A — no functional bugs. Two minor cosmetic/UX issues flagged in design_issues."
+}

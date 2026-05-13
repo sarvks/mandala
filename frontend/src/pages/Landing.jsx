@@ -180,6 +180,47 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* CAUSES TEASER */}
+      <section className="relative border-t border-stone-200">
+        <div className="mx-auto max-w-7xl px-6 py-24 md:px-10">
+          <div className="grid items-end gap-10 md:grid-cols-12">
+            <div className="md:col-span-7">
+              <p className="label-small text-[#7C191E]">Beyond the temple</p>
+              <h2 className="mt-4 font-serif text-4xl leading-tight text-[#1A2436] sm:text-5xl">
+                The same model — for the Earth, the animals, the people.
+              </h2>
+              <p className="mt-6 max-w-xl text-[#475569]">
+                One payment link → many forest-restoration NGOs. One link →
+                many animal hospitals. One link → many human-centric
+                foundations. The Mandala mechanism, extended.
+              </p>
+            </div>
+            <div className="md:col-span-5">
+              <div className="grid gap-3">
+                {[
+                  { slug: "earth", label: "Earth", body: "Forests, climate action, clean water." },
+                  { slug: "animal", label: "Animals", body: "Stray care, wildlife rescue, sanctuary." },
+                  { slug: "human", label: "Humans", body: "Education, women's health, hunger." },
+                ].map((c) => (
+                  <Link
+                    key={c.slug}
+                    to={`/causes/category/${c.slug}`}
+                    data-testid={`landing-cause-${c.slug}`}
+                    className="group flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-5 transition hover:border-[#7C191E]"
+                  >
+                    <div>
+                      <div className="font-serif text-2xl text-[#1A2436]">{c.label}</div>
+                      <div className="mt-1 text-sm text-[#475569]">{c.body}</div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 -translate-x-1 text-[#7C191E] transition-transform group-hover:translate-x-0" strokeWidth={1.5} />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* SUBSCRIPTION */}
       <section className="relative">
         <div className="mx-auto max-w-7xl px-6 py-24 md:px-10">

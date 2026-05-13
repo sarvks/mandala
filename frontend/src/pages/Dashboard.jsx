@@ -32,13 +32,35 @@ export default function Dashboard() {
     }
     api.get("/donations/me").then((r) => setDonations(r.data));
     api.get("/subscriptions/me").then((r) => setSubs(r.data));
+    Promise.all([api.get("/cause-donations/me"), api.get("/cause-subscriptions/me")]).then(
+      ([cd, cs]) => {
+        setDonations((prev) => {
+          const all = [...prev, ...cd.data.map((d) => ({
+            ...d,
+            deity_name: d.cause_name,
+            _is_cause: true,
+            _category: d.category,
+          }))];
+          return all.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+        });
+        setSubs((prev) => {
+          const all = [...prev, ...cs.data.map((s) => ({
+            ...s,
+            deity_name: s.cause_name,
+            _is_cause: true,
+          }))];
+          return all.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+        });
+      }
+    );
     loadFavouritesAndNotifs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading, navigate]);
 
-  const cancel = async (id) => {
+  const cancel = async (id, isCause) => {
     try {
-      await api.post(`/subscriptions/${id}/cancel`);
+      const ep = isCause ? `/cause-subscriptions/${id}/cancel` : `/subscriptions/${id}/cancel`;
+      await api.post(ep);
       setSubs((s) => s.map((x) => (x.id === id ? { ...x, status: "cancelled" } : x)));
       toast.success("Subscription cancelled");
     } catch {

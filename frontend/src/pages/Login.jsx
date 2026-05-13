@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
+import DemoAccountsPanel from "../components/DemoAccountsPanel";
 
 export default function Login() {
   const { login } = useAuth();
@@ -20,7 +21,7 @@ export default function Login() {
       const user = await login(email, password);
       toast.success(`Welcome back, ${user.name}`);
       if (user.role === "super_admin") navigate("/admin");
-      else if (user.role === "temple_admin") navigate("/temple-admin");
+      else if (user.role === "temple_admin" || user.role === "partner") navigate("/partner");
       else navigate(next);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Login failed");
@@ -69,11 +70,7 @@ export default function Login() {
         Don&apos;t have an account?{" "}
         <Link to="/signup" className="text-[#7C191E] underline">Create one</Link>
       </p>
-      <div className="mt-8 rounded-xl border border-stone-200 bg-[#F9F6F0] p-4 text-xs text-[#475569]">
-        <div className="label-small mb-2 text-[#7C191E]">Demo accounts</div>
-        <div>Donor · devotee@mandala.in / devotee123</div>
-        <div>Admin · admin@mandala.in / mandala123</div>
-      </div>
+      <DemoAccountsPanel />
     </div>
   );
 }
