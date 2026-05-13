@@ -1,75 +1,75 @@
 # Mandala — Product Requirements Document
 
 ## Original Problem Statement
-Build Mandala — "One Deity. One Payment Link. Split Donations to all the Temples associated with the deity." Dedicated to Goddess Durga across Shaktism, Shaivism, Lakshmi, Buddhism, Jainism, and Sikhism. The Financial Layer of Indic Religions.
+Build Mandala — "One Deity. One Payment Link. Split donations to all temples associated with the deity." The Financial Layer of Indic Religions.
 
-## User Choices
-- Full platform: landing + donation flow + admin + multi-tenant temple admin
-- Razorpay integration: **MOCKED** (real keys to be swapped later)
-- Donation split: **donor-chooses custom percentages** (sliders, lockable)
-- Deity/temple data: **AI-generated** via Claude Sonnet 4.5 (Emergent Universal Key)
-- Auth: email/password JWT
-- Subscriptions: **both** recurring monthly + tiered patron plans (Bronze/Silver/Gold)
+## Implemented (Feb–May 2026)
+
+### Phase 1 (MVP, Feb 2026)
+- Deities (8) + Temples (20) seeded across 6 Indic traditions
+- Donor JWT auth + signup/login
+- Donation flow with custom-percentage SplitAllocator (lockable + re-balancing sliders)
+- Subscriptions: monthly + Bronze/Silver/Gold patron tiers
+- Donor dashboard, Super-admin analytics (recharts), Temple-admin desk
+- Razorpay MOCK (creates pending → /confirm → succeeded)
+- Claude Sonnet 4.5 (Emergent Universal Key) for AI deity content
+
+### Phase 2 (Apr 2026)
+- `/temples` directory + Grid/Map view toggle (Leaflet via CDN, per-state clustered markers)
+- Favourite/heart button + Donor "My Temples" tab
+- Festival notifications (13 seeded festivals matched via deity/tradition)
+- Branding cleanup (Mandala title, badge removed from index.html)
+- "Mahakali Tribunal" copyright
+
+### Phase 3 (May 2026) — "Beyond the Temple"
+- **Causes & Beneficiaries** — same one-link → many-recipients model extended to:
+  - **Earth** (3 causes × 4 NGOs: SankalpTaru, Project Tiger Fund, SELCO, Ganga Action, etc.)
+  - **Animals** (3 causes × 4 NGOs: Friendicoes, Wildlife SOS, BSPCA, Jivdaya, etc.)
+  - **Humans** (3 causes × 4 NGOs: Pratham, Akshaya Patra, SEWA, Robin Hood Army, etc.)
+- 9 Causes, 36 Beneficiaries, 36 Partner-admin accounts seeded
+- New endpoints: `/api/causes`, `/api/causes/:id/beneficiaries`, `/api/cause-donations`, `/api/cause-subscriptions`
+- **Unified Partner Portal** `/partner` — auto-detects role (`temple_admin` OR `partner`) and shows the right scope
+- **Demo Accounts Panel** on `/login` — one-click sign-in for 6 demo roles
+- Public endpoint `GET /api/demo-accounts` (will be feature-flagged before prod)
+- Landing teaser section "Beyond the Temple" surfacing the three new categories
 
 ## Architecture
-- Backend: FastAPI + motor (MongoDB). JWT (PyJWT + bcrypt). emergentintegrations for Claude.
-- Frontend: React + React Router v7 + Tailwind + shadcn/ui + recharts + sonner toasts.
-- Seed: 6 traditions, 8 deities, 20 temples, 1 super admin, 20 temple admins, 1 demo donor.
-
-## Implemented (Feb 27, 2026)
-### Backend
-- `/api/auth/signup`, `/auth/login`, `/auth/me` — JWT flow with donor role
-- `/api/traditions`, `/api/deities` (filter by tradition/featured), `/api/deities/{id}`, `/api/deities/{id}/temples`, `/api/temples`
-- `/api/donations` (pending -> `/confirm` succeeded, mock Razorpay ref), `/api/donations/me`
-- `/api/subscriptions` (monthly + tier), `/api/subscriptions/me`, cancel
-- `/api/patron-tiers` (Bronze ₹501 / Silver ₹1501 / Gold ₹5001)
-- `/api/admin/deities` (AI-generated via Claude Sonnet 4.5), `/api/admin/temples`
-- `/api/admin/analytics` (total donations, MRR, top deities/temples, recent list, counts)
-- `/api/admin/donations` — all donations
-- `/api/temple-admin/overview` — temple-scoped donations with per-donation share
-- Split validation (sum=100%, non-negative, amounts match total)
-- Role guards: `require_role("super_admin" | "temple_admin")`
-
-### Frontend
-- `/` Landing: hero (mandala motif SVG), how-it-works 3-step, featured deities, traditions, patron tiers, CTA
-- `/deities` — tradition filter chips, masonry grid
-- `/deities/:id` — deity detail (mythology, mantra), temple cards
-- `/donate/:deityId` — amount presets + custom, linked slider `SplitAllocator` (lockable rows, re-balancing), optional note, mock Razorpay 2-step confirm, success screen with transaction ref
-- `/subscribe/:deityId` — toggle monthly vs tier, tier cards with perks, split allocator
-- `/patron` — tier marketing + deity picker
-- `/traditions` — six tradition cards with nested deity chips
-- `/login`, `/signup`
-- `/dashboard` — donor's donations table + subscriptions cards (cancel)
-- `/admin` — Control-Room grid, 4 stat cards, BarChart (top deities), PieChart (top temples), recent donations table
-- `/temple-admin` — temple detail, share totals, donation list
-
-## Testing Status
-- **Backend**: 23/23 pytest (auth, donations, subs, analytics, AI Claude, role guards) — 100%
-- **Frontend**: all flows tested end-to-end — 100%
-- **Payments**: MOCKED (Razorpay)
+- Backend: FastAPI + motor (MongoDB). JWT + bcrypt. emergentintegrations for Claude.
+- Frontend: React 19 + Tailwind + shadcn/ui + recharts + sonner + Leaflet (CDN).
+- Seed: 6 traditions, 8 deities, 20 temples, 20 temple admins, 9 causes, 36 beneficiaries, 36 partner admins, 1 super admin, 1 demo donor.
 
 ## Test Credentials
-See `/app/memory/test_credentials.md`.
+See `/app/memory/test_credentials.md`. All 6 demo accounts authenticate. /api/demo-accounts returns them publicly.
 
-## Backlog / Next Actions
-### P0 (user-ready)
-- Swap mock Razorpay for live keys when user provides them (single env-var change; playbook routing already in place).
-- Hardening: rate-limiting on `/auth/login` and `/donations`; rotate `JWT_SECRET`.
+## Testing Status
+- 57 backend tests passing (23 MVP + 10 favourites + 24 causes/partner)
+- All frontend flows verified end-to-end across 3 testing iterations
 
-### P1 (enhancements)
-- PDF 80G receipt email (via Resend/SMTP) on donation success.
-- Cron-based subscription auto-charge (celery/APScheduler) — currently manual next_charge_at only.
-- Donor-level anonymization toggle (offerings anonymous vs. on wall).
-- Super admin deity/temple CRUD UI (endpoints exist; UI not built).
-- Map view of temples by state.
+## Backlog
+### P0 — production-readiness
+- Swap mock Razorpay for real keys (single env switch)
+- Feature-flag `/api/demo-accounts` (currently public — convenient for preview, must be removed for prod)
+- Rotate JWT_SECRET; rate-limit /auth/login; harden CORS_ORIGINS
+- Split server.py (~1565 lines) into routers: deity_router, cause_router, partner_router, seed.py
 
-### P2 (reach)
-- Shareable offering cards (social proof / conversion loop).
-- Patron-only content: monthly aartis, livestreams.
-- Hindi / regional language toggle.
-- Temple-admin payout reconciliation & UPI/bank settlement module.
+### P1 — feature
+- DRY refactor: extract _aggregate_share() helper in /partner/overview; rename SplitItem.temple_id → recipient_id; extract <DonationReceipt/> shared component
+- PDF 80G receipt email on donation success (Resend/SMTP)
+- Cron-based subscription auto-charge (APScheduler) — currently only first charge logged
+- Live lunar calendar for festivals
+- Super-admin CRUD UI for causes/beneficiaries (endpoints exist; UI not built)
+- Partners can edit their listing + upload payout proof
 
-## Known Gaps
-- Razorpay is mocked; real money flow not live.
-- AI-generated deity content cached once; no manual override UI yet for super admin.
-- Subscription billing loop is simulated (single first charge recorded; no recurring job).
+### P2 — growth
+- Shareable offering cards (WhatsApp/Instagram export) after every donation
+- Hindi / regional language toggle
+- Map view for beneficiaries (we already have lat/lng)
+- Festival-eve "double impact" auspiciousness banner
+- Bank settlement & UPI payout reconciliation for partners
+- Anonymous-vs-public donor wall
+
+## Known Gaps / Caveats
+- Razorpay is mocked; no real money flows
+- /api/demo-accounts exposes credentials publicly (intentional for preview)
+- 36 beneficiary names are real Indian NGOs included as illustrative DEMO partners — disclaimer banner shown on /causes page
+- The "Made with Emergent" badge that appears in the live preview is platform-injected at request time; codebase contains no traces (verified via grep)

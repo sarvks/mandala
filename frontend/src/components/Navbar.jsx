@@ -85,8 +85,7 @@ export default function Navbar() {
             <NavLink to="/partner" data-testid="nav-partner" className={navItem}>
               Partner Desk
             </NavLink>
-          )}
-          {user?.role === "donor" && (
+          )}          {user?.role === "donor" && (
             <NavLink to="/dashboard" data-testid="nav-dashboard" className={navItem}>
               My Dashboard
             </NavLink>

@@ -45,20 +45,20 @@ export default function DemoAccountsPanel() {
             onClick={() => oneClick(a)}
             disabled={loading === a.email}
             data-testid={`demo-login-${a.email}`}
-            className="group flex items-start justify-between gap-3 rounded-xl border border-[#D4AF37]/40 bg-white p-4 text-left transition hover:border-[#7C191E] disabled:opacity-60"
+            className="group flex w-full flex-col gap-2 rounded-xl border border-[#D4AF37]/40 bg-white p-4 text-left transition hover:border-[#7C191E] disabled:opacity-60"
           >
-            <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
               <div className="font-medium text-[#1A2436]">{a.role}</div>
-              <div className="mt-1 truncate text-xs text-[#475569]">{a.email}</div>
-              <div className="mt-2 line-clamp-2 text-xs text-[#475569]">{a.tagline}</div>
-            </div>
-            <div className="shrink-0 self-center">
               {loading === a.email ? (
-                <Loader2 className="h-4 w-4 animate-spin text-[#7C191E]" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#7C191E]" />
               ) : (
-                <span className="text-xs uppercase tracking-[0.18em] text-[#7C191E] group-hover:underline">Sign in →</span>
+                <span className="shrink-0 self-start text-[10px] uppercase tracking-[0.18em] text-[#7C191E] group-hover:underline">
+                  Sign in →
+                </span>
               )}
             </div>
+            <div className="truncate text-xs text-[#475569]">{a.email}</div>
+            <div className="line-clamp-2 text-xs text-[#475569]">{a.tagline}</div>
           </button>
         ))}
       </div>
